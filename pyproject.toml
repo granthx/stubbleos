@@ -97,3 +97,4 @@ warn_return_any = false
 [[tool.mypy.overrides]]
 module = ["geoalchemy2.*", "ortools.*", "rasterio.*", "pystac_client.*", "geopandas.*", "simpy.*", "langgraph.*", "scipy.*"]
 ignore_missing_imports = true
+ignore_errors = true

@@ -9,7 +9,7 @@ from uuid import UUID
 
 import numpy as np
 
-from stubbleos.core.types import FieldState, MachineStatus
+from stubbleos.core.types import FieldState, MachineStatus, MachineType
 from stubbleos.simulation.model import (
     DistrictState,
     SimulatedField,
@@ -245,50 +245,325 @@ class BaselineBStrategy(CoordinationStrategy):
 
 
 class StubbleOSCentralizedStrategy(CoordinationStrategy):
-    """Stub for StubbleOS Centralized Strategy (OR-Tools / VRP optimization).
+    """StubbleOS Centralized Strategy: CP-SAT optimization with VRP logistics.
 
-    Scheduled for Phase 3.
+    Periodically solves a global multi-machine scheduling model (CP-SAT) with
+    deadline-weighted coverage and smallholder fairness weighting.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, time_limit_seconds: float = 0.05) -> None:
         super().__init__(name="stubbleos_centralized")
+        self.time_limit_seconds = time_limit_seconds
+        self.machine_queues: dict[UUID, deque[UUID]] = {}
+        self.confirmed_bookings: set[UUID] = set()
 
     def initialize(self, state: DistrictState, rng: np.random.Generator) -> None:
-        raise NotImplementedError("StubbleOS Centralized Strategy will be implemented in Phase 3.")
+        super().initialize(state, rng)
+        self.machine_queues = {m.machine_id: deque() for m in state.machines}
+        self.confirmed_bookings.clear()
 
     def on_field_harvested(self, field: SimulatedField, current_day: float) -> SimulatedMachine | None:
-        raise NotImplementedError("StubbleOS Centralized Strategy will be implemented in Phase 3.")
+        # Field registers with central system
+        self.messages_count += 1
+        self.confirmed_bookings.add(field.field_id)
+
+        # Check if an immediate machine of suitable type is idle
+        if self.state is not None:
+            for m in self.state.machines:
+                if (
+                    m.status == MachineStatus.AVAILABLE
+                    and m.current_field_id is None
+                    and not self.machine_queues[m.machine_id]
+                ):
+                    self.messages_count += 1
+                    return m
+        return None
 
     def on_machine_available(self, machine: SimulatedMachine, current_day: float) -> SimulatedField | None:
-        raise NotImplementedError("StubbleOS Centralized Strategy will be implemented in Phase 3.")
+        if self.state is None:
+            return None
+
+        # Check pre-computed queue for this machine
+        q = self.machine_queues.get(machine.machine_id, deque())
+        while q:
+            f_id = q.popleft()
+            f = self.state.get_field(f_id)
+            if f.state == FieldState.HARVESTED_RESIDUE_PRESENT and not f.service_in_progress:
+                self.messages_count += 1
+                return f
+
+        # If machine queue empty, look for any unassigned pending field
+        for f in self.state.fields:
+            if (
+                f.state == FieldState.HARVESTED_RESIDUE_PRESENT
+                and not f.service_in_progress
+                and f.field_id not in self.confirmed_bookings
+            ):
+                self.confirmed_bookings.add(f.field_id)
+                self.messages_count += 1
+                return f
+
+        return None
 
     def on_day_start(self, day: float) -> list[tuple[SimulatedMachine, SimulatedField]]:
-        raise NotImplementedError("StubbleOS Centralized Strategy will be implemented in Phase 3.")
+        """Run CP-SAT solver on pending residue fields when idle machines are available."""
+        if self.state is None or self.rng is None:
+            return []
+
+        # Collect pending unserviced fields
+        pending_fields = [
+            f
+            for f in self.state.fields
+            if f.state == FieldState.HARVESTED_RESIDUE_PRESENT and not f.service_in_progress
+        ]
+
+        if not pending_fields:
+            return []
+
+        idle_machines = [
+            m
+            for m in self.state.machines
+            if m.status == MachineStatus.AVAILABLE and m.current_field_id is None
+        ]
+
+        unassigned_pending = [
+            f for f in pending_fields if not any(f.field_id in q for q in self.machine_queues.values())
+        ]
+
+        # Only solve CP-SAT if there are both idle machines and unassigned pending fields
+        if not idle_machines or not unassigned_pending:
+            assignments: list[tuple[SimulatedMachine, SimulatedField]] = []
+            for m in idle_machines:
+                field = self.on_machine_available(m, day)
+                if field is not None:
+                    m.status = MachineStatus.IN_USE
+                    m.current_field_id = field.field_id
+                    assignments.append((m, field))
+            return assignments
+
+        from stubbleos.optimization.scheduler import (
+            JobRequest,
+            MachineResource,
+            SchedulerConfig,
+            solve_schedule,
+        )
+
+        current_hour = day * 24.0
+        jobs: list[JobRequest] = []
+        for f in unassigned_pending[:40]:  # batch up to 40 fields per solve
+            farmer = self.state.get_farmer(f.farmer_id)
+            jobs.append(
+                JobRequest(
+                    field_id=f.field_id,
+                    farmer_id=f.farmer_id,
+                    landholding_class=farmer.landholding_class,
+                    area_acres=f.area_acres,
+                    earliest_start_hour=max(current_hour, f.harvest_day * 24.0),
+                    deadline_hour=f.sowing_deadline_day * 24.0,
+                    center_lat=f.center_lat,
+                    center_lon=f.center_lon,
+                    eligible_machine_types=list(MachineType),
+                )
+            )
+
+        machines = [
+            MachineResource(
+                machine_id=m.machine_id,
+                machine_type=m.machine_type,
+                capacity_acres_per_hour=m.capacity_acres_per_hour,
+                hourly_cost_inr=m.hourly_cost_inr,
+                current_lat=m.current_lat,
+                current_lon=m.current_lon,
+                available_from_hour=current_hour,
+            )
+            for m in self.state.machines
+        ]
+
+        seed_int = int(self.rng.integers(1, 100000))
+        cfg = SchedulerConfig(
+            time_limit_seconds=self.time_limit_seconds,
+            random_seed=seed_int,
+        )
+
+        output = solve_schedule(jobs=jobs, machines=machines, config=cfg)
+        self.total_planning_latency_ms += output.wall_time_seconds * 1000.0
+
+        # Update confirmed bookings and queues
+        for a in output.assignments:
+            self.confirmed_bookings.add(a.field_id)
+            if a.field_id not in self.machine_queues[a.machine_id]:
+                self.machine_queues[a.machine_id].append(a.field_id)
+
+        self.messages_count += len(output.assignments) * 2
+
+        # Dispatch idle machines immediately
+        dispatched_assignments: list[tuple[SimulatedMachine, SimulatedField]] = []
+        for m in self.state.machines:
+            if m.status == MachineStatus.AVAILABLE and m.current_field_id is None:
+                field = self.on_machine_available(m, day)
+                if field is not None:
+                    m.status = MachineStatus.IN_USE
+                    m.current_field_id = field.field_id
+                    dispatched_assignments.append((m, field))
+
+        return dispatched_assignments
 
     def has_confirmed_booking(self, field_id: UUID) -> bool:
-        raise NotImplementedError("StubbleOS Centralized Strategy will be implemented in Phase 3.")
+        return field_id in self.confirmed_bookings
 
 
 class StubbleOSDecentralizedStrategy(CoordinationStrategy):
-    """Stub for StubbleOS Decentralized Strategy (Multi-Agent Negotiation).
+    """StubbleOS Decentralized Strategy: Contract-Net Protocol (CNP) auctions.
 
-    Scheduled for Phase 3.
+    Fields broadcast task announcements (CFPs); machines bid based on
+    marginal transit and time availability; conflicts are resolved with
+    smallholder fairness protection and deterministic tie-breaking.
     """
 
     def __init__(self) -> None:
         super().__init__(name="stubbleos_decentralized")
+        self.coordinator: Any = None
+        self.active_awards: dict[UUID, UUID] = {}  # field_id -> machine_id
+        self.pending_tasks: dict[UUID, SimulatedField] = {}
 
     def initialize(self, state: DistrictState, rng: np.random.Generator) -> None:
-        raise NotImplementedError("StubbleOS Decentralized Strategy will be implemented in Phase 3.")
+        super().initialize(state, rng)
+        from stubbleos.coordination.auction import ContractNetCoordinator
+
+        seed_int = int(rng.integers(1, 100000))
+        self.coordinator = ContractNetCoordinator(seed=seed_int)
+        self.active_awards.clear()
+        self.pending_tasks.clear()
 
     def on_field_harvested(self, field: SimulatedField, current_day: float) -> SimulatedMachine | None:
-        raise NotImplementedError("StubbleOS Decentralized Strategy will be implemented in Phase 3.")
+        if self.state is None or self.coordinator is None:
+            return None
+
+        self.pending_tasks[field.field_id] = field
+
+        # Check for idle machines to run immediate contract-net auction
+        idle_machines = [
+            m
+            for m in self.state.machines
+            if m.status == MachineStatus.AVAILABLE and m.current_field_id is None
+        ]
+
+        if not idle_machines:
+            return None
+
+        from stubbleos.coordination.auction import TaskAnnouncement
+        from stubbleos.optimization.scheduler import MachineResource
+
+        farmer = self.state.get_farmer(field.farmer_id)
+        task = TaskAnnouncement(
+            task_id=field.field_id,
+            farmer_id=field.farmer_id,
+            landholding_class=farmer.landholding_class,
+            area_acres=field.area_acres,
+            center_lat=field.center_lat,
+            center_lon=field.center_lon,
+            earliest_start_hour=field.harvest_day * 24.0,
+            deadline_hour=field.sowing_deadline_day * 24.0,
+            eligible_machine_types=list(MachineType),
+        )
+
+        m_resources = [
+            MachineResource(
+                machine_id=m.machine_id,
+                machine_type=m.machine_type,
+                capacity_acres_per_hour=m.capacity_acres_per_hour,
+                hourly_cost_inr=m.hourly_cost_inr,
+                current_lat=m.current_lat,
+                current_lon=m.current_lon,
+                available_from_hour=current_day * 24.0,
+            )
+            for m in idle_machines
+        ]
+
+        result = self.coordinator.run_auction_round([task], m_resources, current_day * 24.0)
+        self.messages_count += result.announcements_count + result.bids_count + len(result.awards)
+        self.total_planning_latency_ms += 0.5
+
+        if result.awards:
+            award = result.awards[0]
+            self.active_awards[field.field_id] = award.machine_id
+            self.pending_tasks.pop(field.field_id, None)
+            return self.state.get_machine(award.machine_id)
+
+        return None
 
     def on_machine_available(self, machine: SimulatedMachine, current_day: float) -> SimulatedField | None:
-        raise NotImplementedError("StubbleOS Decentralized Strategy will be implemented in Phase 3.")
+        if self.state is None or self.coordinator is None:
+            return None
+
+        # When machine is freed, auction available pending fields to this machine
+        pending = [
+            f
+            for f in self.state.fields
+            if f.state == FieldState.HARVESTED_RESIDUE_PRESENT
+            and not f.service_in_progress
+            and f.field_id not in self.active_awards
+        ]
+
+        if not pending:
+            return None
+
+        from stubbleos.coordination.auction import TaskAnnouncement
+        from stubbleos.optimization.scheduler import MachineResource
+
+        tasks = []
+        for f in pending[:20]:  # Evaluate up to 20 candidate fields in local auction
+            farmer = self.state.get_farmer(f.farmer_id)
+            tasks.append(
+                TaskAnnouncement(
+                    task_id=f.field_id,
+                    farmer_id=f.farmer_id,
+                    landholding_class=farmer.landholding_class,
+                    area_acres=f.area_acres,
+                    center_lat=f.center_lat,
+                    center_lon=f.center_lon,
+                    earliest_start_hour=f.harvest_day * 24.0,
+                    deadline_hour=f.sowing_deadline_day * 24.0,
+                    eligible_machine_types=[machine.machine_type],
+                )
+            )
+
+        m_res = MachineResource(
+            machine_id=machine.machine_id,
+            machine_type=machine.machine_type,
+            capacity_acres_per_hour=machine.capacity_acres_per_hour,
+            hourly_cost_inr=machine.hourly_cost_inr,
+            current_lat=machine.current_lat,
+            current_lon=machine.current_lon,
+            available_from_hour=current_day * 24.0,
+        )
+
+        result = self.coordinator.run_auction_round(tasks, [m_res], current_day * 24.0)
+        self.messages_count += result.announcements_count + result.bids_count + len(result.awards)
+        self.total_planning_latency_ms += 0.5
+
+        if result.awards:
+            award = result.awards[0]
+            self.active_awards[award.task_id] = machine.machine_id
+            return self.state.get_field(award.task_id)
+
+        return None
 
     def on_day_start(self, day: float) -> list[tuple[SimulatedMachine, SimulatedField]]:
-        raise NotImplementedError("StubbleOS Decentralized Strategy will be implemented in Phase 3.")
+        """Run morning auction round for any unassigned fields and idle machines."""
+        if self.state is None:
+            return []
+
+        assignments: list[tuple[SimulatedMachine, SimulatedField]] = []
+        for m in self.state.machines:
+            if m.status == MachineStatus.AVAILABLE and m.current_field_id is None:
+                field = self.on_machine_available(m, day)
+                if field is not None:
+                    m.status = MachineStatus.IN_USE
+                    m.current_field_id = field.field_id
+                    assignments.append((m, field))
+
+        return assignments
 
     def has_confirmed_booking(self, field_id: UUID) -> bool:
-        raise NotImplementedError("StubbleOS Decentralized Strategy will be implemented in Phase 3.")
+        return field_id in self.active_awards

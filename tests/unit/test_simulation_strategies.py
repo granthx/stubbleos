@@ -1,7 +1,6 @@
 """Unit tests for coordination strategies: Baseline A, Baseline B, and StubbleOS stubs."""
 
 import numpy as np
-import pytest
 
 from stubbleos.core.types import FieldState, MachineStatus
 from stubbleos.simulation.config import ScenarioConfig
@@ -71,26 +70,24 @@ def test_baseline_b_fcfs_queue_behavior() -> None:
     assert len(strategy.queue) == 0
 
 
-def test_stubbleos_stubs_raise_not_implemented() -> None:
+def test_stubbleos_strategies_behavior() -> None:
     config = ScenarioConfig(name="test")
     state = generate_synthetic_district(config, seed=42)
     rng = np.random.default_rng(42)
 
-    centralized = StubbleOSCentralizedStrategy()
+    field = state.fields[0]
+    field.state = FieldState.HARVESTED_RESIDUE_PRESENT
+
+    # Centralized Strategy
+    centralized = StubbleOSCentralizedStrategy(time_limit_seconds=0.5)
+    centralized.initialize(state, rng)
+    assigned_m = centralized.on_field_harvested(field, current_day=1.0)
+    assert centralized.has_confirmed_booking(field.field_id) is True
+    assert assigned_m is not None
+
+    # Decentralized Strategy
     decentralized = StubbleOSDecentralizedStrategy()
-
-    for strat in [centralized, decentralized]:
-        with pytest.raises(NotImplementedError, match="will be implemented in Phase 3"):
-            strat.initialize(state, rng)
-
-        with pytest.raises(NotImplementedError, match="will be implemented in Phase 3"):
-            strat.on_field_harvested(state.fields[0], 1.0)
-
-        with pytest.raises(NotImplementedError, match="will be implemented in Phase 3"):
-            strat.on_machine_available(state.machines[0], 1.0)
-
-        with pytest.raises(NotImplementedError, match="will be implemented in Phase 3"):
-            strat.on_day_start(1.0)
-
-        with pytest.raises(NotImplementedError, match="will be implemented in Phase 3"):
-            strat.has_confirmed_booking(state.fields[0].field_id)
+    decentralized.initialize(state, rng)
+    m_award = decentralized.on_field_harvested(field, current_day=1.0)
+    assert decentralized.has_confirmed_booking(field.field_id) is True
+    assert m_award is not None
