@@ -6,7 +6,7 @@ import hashlib
 import json
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from sqlalchemy import select, text
@@ -14,8 +14,8 @@ from sqlalchemy.orm import Session
 
 from stubbleos.core.clock import as_utc
 from stubbleos.core.events import Event
-from stubbleos.core.types import Channel, ConsentPurpose, Language
-from stubbleos.data.models import AgentEvent, AuditLog, Consent
+from stubbleos.core.types import ApprovalStatus, Channel, ConsentPurpose, Language, PlanStatus
+from stubbleos.data.models import AgentEvent, Approval, AuditLog, Consent, Plan
 
 GENESIS_HASH = "0" * 64
 _AUDIT_LOCK_KEY = 727_001
@@ -206,3 +206,126 @@ class AuditLogRepository:
             prev = row.entry_hash
             count += 1
         return AuditVerification(True, None, count)
+
+
+class PlanRepository:
+    """Repository for district coordination plans."""
+
+    def __init__(self, session: Session) -> None:
+        self._s = session
+
+    def create(
+        self,
+        *,
+        district: str,
+        plan_date: date,
+        strategy: str,
+        version: int = 1,
+        status: PlanStatus = PlanStatus.ACTIVE,
+        parent_plan_id: uuid.UUID | None = None,
+        payload: dict[str, Any] | None = None,
+        objective_value: float | None = None,
+        solver_status: str | None = None,
+        plan_id: uuid.UUID | None = None,
+    ) -> Plan:
+        plan = Plan(
+            id=plan_id or uuid.uuid4(),
+            district=district,
+            plan_date=plan_date,
+            strategy=strategy,
+            version=version,
+            status=status,
+            parent_plan_id=parent_plan_id,
+            payload=payload or {},
+            objective_value=objective_value,
+            solver_status=solver_status,
+        )
+        self._s.add(plan)
+        self._s.flush()
+        return plan
+
+    def get_by_id(self, plan_id: uuid.UUID) -> Plan | None:
+        return self._s.get(Plan, plan_id)
+
+    def get_latest_plan(self, district: str, plan_date: date, strategy: str) -> Plan | None:
+        stmt = (
+            select(Plan)
+            .where(
+                Plan.district == district,
+                Plan.plan_date == plan_date,
+                Plan.strategy == strategy,
+            )
+            .order_by(Plan.version.desc())
+            .limit(1)
+        )
+        return self._s.scalars(stmt).first()
+
+    def supersede(self, plan_id: uuid.UUID) -> bool:
+        plan = self._s.get(Plan, plan_id)
+        if plan is None:
+            return False
+        plan.status = PlanStatus.SUPERSEDED
+        self._s.flush()
+        return True
+
+
+class ApprovalRepository:
+    """Repository for HITL approvals queue."""
+
+    def __init__(self, session: Session) -> None:
+        self._s = session
+
+    def create(
+        self,
+        *,
+        kind: str,
+        subject_type: str,
+        subject_id: uuid.UUID,
+        reason: str,
+        requested_by: str,
+        confidence: float | None = None,
+        payload: dict[str, Any] | None = None,
+        approval_id: uuid.UUID | None = None,
+    ) -> Approval:
+        row = Approval(
+            id=approval_id or uuid.uuid4(),
+            kind=kind,
+            subject_type=subject_type,
+            subject_id=subject_id,
+            status=ApprovalStatus.PENDING,
+            reason=reason,
+            confidence=confidence,
+            requested_by=requested_by,
+            payload=payload or {},
+        )
+        self._s.add(row)
+        self._s.flush()
+        return row
+
+    def get_by_id(self, approval_id: uuid.UUID) -> Approval | None:
+        return self._s.get(Approval, approval_id)
+
+    def resolve(
+        self,
+        approval_id: uuid.UUID,
+        *,
+        status: ApprovalStatus,
+        decided_by_role: str,
+        decision_note: str | None = None,
+        decided_at: datetime | None = None,
+    ) -> Approval | None:
+        row = self._s.get(Approval, approval_id)
+        if row is None:
+            return None
+        row.status = status
+        row.decided_by_role = decided_by_role
+        row.decision_note = decision_note
+        row.decided_at = as_utc(decided_at) if decided_at else as_utc(datetime.now())
+        self._s.flush()
+        return row
+
+    def list_pending(self, *, subject_type: str | None = None) -> list[Approval]:
+        stmt = select(Approval).where(Approval.status == ApprovalStatus.PENDING)
+        if subject_type:
+            stmt = stmt.where(Approval.subject_type == subject_type)
+        return list(self._s.scalars(stmt.order_by(Approval.created_at)).all())

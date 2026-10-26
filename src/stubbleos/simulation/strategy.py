@@ -345,7 +345,6 @@ class StubbleOSCentralizedStrategy(CoordinationStrategy):
             JobRequest,
             MachineResource,
             SchedulerConfig,
-            solve_schedule,
         )
 
         current_hour = day * 24.0
@@ -385,8 +384,34 @@ class StubbleOSCentralizedStrategy(CoordinationStrategy):
             random_seed=seed_int,
         )
 
-        output = solve_schedule(jobs=jobs, machines=machines, config=cfg)
+        import asyncio
+
+        from stubbleos.agents.machine_scheduler.logic import run_machine_scheduler
+        from stubbleos.agents.machine_scheduler.schemas import MachineSchedulerInput
+        from stubbleos.agents.policy_guard.logic import evaluate_policy
+        from stubbleos.agents.policy_guard.schemas import PolicyCheckRequest
+        from stubbleos.llm.fake import FakeLLM
+
+        agent_inp = MachineSchedulerInput(
+            jobs=jobs,
+            machines=machines,
+            mode="cpsat",
+            config=cfg,
+            request_explanation=True,
+        )
+        fake_llm = FakeLLM(default="Centralized CP-SAT schedule computed successfully.")
+        output = asyncio.run(run_machine_scheduler(agent_inp, llm=fake_llm))
+        self.llm_calls_count += 1
         self.total_planning_latency_ms += output.wall_time_seconds * 1000.0
+
+        # Run cross-cutting Policy Guard validation on planned assignments
+        policy_req = PolicyCheckRequest(
+            action_ref=f"dispatch_day_{day:.0f}",
+            payload={"assigned_count": len(output.assignments)},
+        )
+        policy_res = evaluate_policy(policy_req)
+        if not policy_res.is_allowed:
+            return []
 
         # Update confirmed bookings and queues
         for a in output.assignments:
@@ -451,12 +476,17 @@ class StubbleOSDecentralizedStrategy(CoordinationStrategy):
         if not idle_machines:
             return None
 
-        from stubbleos.coordination.auction import TaskAnnouncement
-        from stubbleos.optimization.scheduler import MachineResource
+        import asyncio
+
+        from stubbleos.agents.machine_scheduler.logic import run_machine_scheduler
+        from stubbleos.agents.machine_scheduler.schemas import MachineSchedulerInput
+        from stubbleos.agents.policy_guard.logic import evaluate_policy
+        from stubbleos.agents.policy_guard.schemas import PolicyCheckRequest
+        from stubbleos.optimization.scheduler import JobRequest, MachineResource
 
         farmer = self.state.get_farmer(field.farmer_id)
-        task = TaskAnnouncement(
-            task_id=field.field_id,
+        job = JobRequest(
+            field_id=field.field_id,
             farmer_id=field.farmer_id,
             landholding_class=farmer.landholding_class,
             area_acres=field.area_acres,
@@ -480,15 +510,29 @@ class StubbleOSDecentralizedStrategy(CoordinationStrategy):
             for m in idle_machines
         ]
 
-        result = self.coordinator.run_auction_round([task], m_resources, current_day * 24.0)
-        self.messages_count += result.announcements_count + result.bids_count + len(result.awards)
+        seed_int = int(self.rng.integers(1, 100000)) if self.rng is not None else 42
+        agent_inp = MachineSchedulerInput(
+            jobs=[job],
+            machines=m_resources,
+            mode="auction",
+            seed=seed_int,
+            current_hour=current_day * 24.0,
+            request_explanation=False,
+        )
+        sched_out = asyncio.run(run_machine_scheduler(agent_inp))
+        self.messages_count += len(idle_machines) * 2 + len(sched_out.assignments)
         self.total_planning_latency_ms += 0.5
 
-        if result.awards:
-            award = result.awards[0]
-            self.active_awards[field.field_id] = award.machine_id
-            self.pending_tasks.pop(field.field_id, None)
-            return self.state.get_machine(award.machine_id)
+        if sched_out.assignments:
+            award = sched_out.assignments[0]
+            policy_req = PolicyCheckRequest(
+                action_ref=f"auction_award_{award.field_id}",
+                payload={"field_id": str(award.field_id), "machine_id": str(award.machine_id)},
+            )
+            if evaluate_policy(policy_req).is_allowed:
+                self.active_awards[field.field_id] = award.machine_id
+                self.pending_tasks.pop(field.field_id, None)
+                return self.state.get_machine(award.machine_id)
 
         return None
 
@@ -508,15 +552,20 @@ class StubbleOSDecentralizedStrategy(CoordinationStrategy):
         if not pending:
             return None
 
-        from stubbleos.coordination.auction import TaskAnnouncement
-        from stubbleos.optimization.scheduler import MachineResource
+        import asyncio
 
-        tasks = []
+        from stubbleos.agents.machine_scheduler.logic import run_machine_scheduler
+        from stubbleos.agents.machine_scheduler.schemas import MachineSchedulerInput
+        from stubbleos.agents.policy_guard.logic import evaluate_policy
+        from stubbleos.agents.policy_guard.schemas import PolicyCheckRequest
+        from stubbleos.optimization.scheduler import JobRequest, MachineResource
+
+        jobs = []
         for f in pending[:20]:  # Evaluate up to 20 candidate fields in local auction
             farmer = self.state.get_farmer(f.farmer_id)
-            tasks.append(
-                TaskAnnouncement(
-                    task_id=f.field_id,
+            jobs.append(
+                JobRequest(
+                    field_id=f.field_id,
                     farmer_id=f.farmer_id,
                     landholding_class=farmer.landholding_class,
                     area_acres=f.area_acres,
@@ -538,14 +587,28 @@ class StubbleOSDecentralizedStrategy(CoordinationStrategy):
             available_from_hour=current_day * 24.0,
         )
 
-        result = self.coordinator.run_auction_round(tasks, [m_res], current_day * 24.0)
-        self.messages_count += result.announcements_count + result.bids_count + len(result.awards)
+        seed_int = int(self.rng.integers(1, 100000)) if self.rng is not None else 42
+        inp = MachineSchedulerInput(
+            jobs=jobs,
+            machines=[m_res],
+            mode="auction",
+            seed=seed_int,
+            current_hour=current_day * 24.0,
+            request_explanation=False,
+        )
+        sched_out = asyncio.run(run_machine_scheduler(inp))
+        self.messages_count += len(jobs) * 2 + len(sched_out.assignments)
         self.total_planning_latency_ms += 0.5
 
-        if result.awards:
-            award = result.awards[0]
-            self.active_awards[award.task_id] = machine.machine_id
-            return self.state.get_field(award.task_id)
+        if sched_out.assignments:
+            award = sched_out.assignments[0]
+            policy_req = PolicyCheckRequest(
+                action_ref=f"auction_award_{award.field_id}",
+                payload={"field_id": str(award.field_id), "machine_id": str(machine.machine_id)},
+            )
+            if evaluate_policy(policy_req).is_allowed:
+                self.active_awards[award.field_id] = machine.machine_id
+                return self.state.get_field(award.field_id)
 
         return None
 
