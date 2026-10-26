@@ -1,0 +1,43 @@
+name: "low-trust"
+description: "Low farmer trust scenario where risk-averse farmers quickly resort to burning if machinery is not immediately confirmed."
+district_name: "ludhiana"
+season_start: "2026-10-15T00:00:00Z"
+season_length_days: 35
+truck_count: 30
+is_synthetic: true
+
+district_size:
+  num_farmers: 180
+  fields_per_farmer_min: 1
+  fields_per_farmer_max: 3
+  landholding_distribution:
+    marginal: 0.35
+    small: 0.30
+    semi_medium: 0.20
+    medium: 0.12
+    large: 0.03
+
+machine_counts:
+  happy_seeder: 18
+  super_seeder: 24
+  baler: 12
+  rake: 12
+
+stochastic_parameters:
+  rain_shock_severity: 0.15
+  rain_duration_hours_min: 24.0
+  rain_duration_hours_max: 48.0
+  machine_breakdown_rate_per_day: 0.03
+  mean_repair_hours: 18.0
+  farmer_trust_mean: 0.25
+  farmer_trust_std: 0.10
+  deadline_window_days_min: 10
+  deadline_window_days_max: 20
+
+buyer_specs:
+  num_biomass_plants: 2
+  num_cbg_plants: 2
+  num_paper_mills: 1
+  target_total_demand_tonnes: 12000.0
+  price_inr_per_tonne_min: 1600.0
+  price_inr_per_tonne_max: 2100.0

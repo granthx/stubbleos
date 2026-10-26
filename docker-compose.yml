@@ -1,0 +1,50 @@
+# Phase 1 stack: postgres(+PostGIS), redis, one-shot migration, api.
+# worker (Phase 4+) and frontend (Phase 7) are intentionally not defined yet.
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: stubbleos
+      POSTGRES_PASSWORD: stubbleos   # local dev only
+      POSTGRES_DB: stubbleos
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stubbleos -d stubbleos"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    build: .
+    command: ["alembic", "upgrade", "head"]
+    environment: &app_env
+      STUBBLEOS_ENV: dev
+      STUBBLEOS_DATABASE_URL: postgresql+psycopg://stubbleos:stubbleos@postgres:5432/stubbleos
+      STUBBLEOS_REDIS_URL: redis://redis:6379/0
+      STUBBLEOS_LLM_PROVIDER: ${STUBBLEOS_LLM_PROVIDER:-fake}
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: "no"
+
+  api:
+    build: .
+    environment: *app_env
+    ports: ["8000:8000"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+
+volumes:
+  pgdata:
