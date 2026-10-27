@@ -1,0 +1,108 @@
+{
+  "type": "FeatureCollection",
+  "is_synthetic": true,
+  "label": "synthetic Sentinel-2 L2A STAC FeatureCollection for Sangrur District, Punjab (Kharif paddy harvest window)",
+  "features": [
+    {
+      "type": "Feature",
+      "stac_version": "1.0.0",
+      "id": "S2A_MSIL2A_20261020T054001_N0500_R005_T43RDR_20261020T083000",
+      "bbox": [75.70, 30.15, 76.15, 30.45],
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [75.70, 30.15],
+            [76.15, 30.15],
+            [76.15, 30.45],
+            [75.70, 30.45],
+            [75.70, 30.15]
+          ]
+        ]
+      },
+      "properties": {
+        "datetime": "2026-10-20T05:40:01Z",
+        "platform": "sentinel-2a",
+        "instruments": ["msi"],
+        "constellation": "sentinel-2",
+        "eo:cloud_cover": 4.2,
+        "grid:code": "CDAS-T43RDR"
+      },
+      "assets": {
+        "red": {
+          "href": "https://sentinel-cpc.s3.amazonaws.com/tiles/43/R/DR/2026/10/20/0/B04.jp2",
+          "title": "Band 4 (Red)",
+          "type": "image/jp2"
+        },
+        "green": {
+          "href": "https://sentinel-cpc.s3.amazonaws.com/tiles/43/R/DR/2026/10/20/0/B03.jp2",
+          "title": "Band 3 (Green)",
+          "type": "image/jp2"
+        },
+        "blue": {
+          "href": "https://sentinel-cpc.s3.amazonaws.com/tiles/43/R/DR/2026/10/20/0/B02.jp2",
+          "title": "Band 2 (Blue)",
+          "type": "image/jp2"
+        },
+        "nir": {
+          "href": "https://sentinel-cpc.s3.amazonaws.com/tiles/43/R/DR/2026/10/20/0/B08.jp2",
+          "title": "Band 8 (NIR)",
+          "type": "image/jp2"
+        },
+        "swir16": {
+          "href": "https://sentinel-cpc.s3.amazonaws.com/tiles/43/R/DR/2026/10/20/0/B11.jp2",
+          "title": "Band 11 (SWIR 1.6um)",
+          "type": "image/jp2"
+        },
+        "swir22": {
+          "href": "https://sentinel-cpc.s3.amazonaws.com/tiles/43/R/DR/2026/10/20/0/B12.jp2",
+          "title": "Band 12 (SWIR 2.2um)",
+          "type": "image/jp2"
+        }
+      }
+    },
+    {
+      "type": "Feature",
+      "stac_version": "1.0.0",
+      "id": "S2B_MSIL2A_20261025T054009_N0500_R005_T43RDR_20261025T084500",
+      "bbox": [75.70, 30.15, 76.15, 30.45],
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [75.70, 30.15],
+            [76.15, 30.15],
+            [76.15, 30.45],
+            [75.70, 30.45],
+            [75.70, 30.15]
+          ]
+        ]
+      },
+      "properties": {
+        "datetime": "2026-10-25T05:40:09Z",
+        "platform": "sentinel-2b",
+        "instruments": ["msi"],
+        "constellation": "sentinel-2",
+        "eo:cloud_cover": 8.5,
+        "grid:code": "CDAS-T43RDR"
+      },
+      "assets": {
+        "red": {
+          "href": "https://sentinel-cpc.s3.amazonaws.com/tiles/43/R/DR/2026/10/25/0/B04.jp2",
+          "title": "Band 4 (Red)",
+          "type": "image/jp2"
+        },
+        "nir": {
+          "href": "https://sentinel-cpc.s3.amazonaws.com/tiles/43/R/DR/2026/10/25/0/B08.jp2",
+          "title": "Band 8 (NIR)",
+          "type": "image/jp2"
+        },
+        "swir16": {
+          "href": "https://sentinel-cpc.s3.amazonaws.com/tiles/43/R/DR/2026/10/25/0/B11.jp2",
+          "title": "Band 11 (SWIR 1.6um)",
+          "type": "image/jp2"
+        }
+      }
+    }
+  ]
+}

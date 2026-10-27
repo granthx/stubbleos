@@ -14,8 +14,26 @@ from sqlalchemy.orm import Session
 
 from stubbleos.core.clock import as_utc
 from stubbleos.core.events import Event
-from stubbleos.core.types import ApprovalStatus, Channel, ConsentPurpose, Language, PlanStatus
-from stubbleos.data.models import AgentEvent, Approval, AuditLog, Consent, Plan
+from stubbleos.core.types import (
+    ApprovalStatus,
+    Channel,
+    ConsentPurpose,
+    FieldState,
+    ImpactRecordStatus,
+    Language,
+    PlanStatus,
+)
+from stubbleos.data.models import (
+    IMPACT_LABEL,
+    AgentEvent,
+    Approval,
+    AuditLog,
+    Consent,
+    FieldRow,
+    ImpactRecord,
+    MrvEvidence,
+    Plan,
+)
 
 GENESIS_HASH = "0" * 64
 _AUDIT_LOCK_KEY = 727_001
@@ -329,3 +347,116 @@ class ApprovalRepository:
         if subject_type:
             stmt = stmt.where(Approval.subject_type == subject_type)
         return list(self._s.scalars(stmt.order_by(Approval.created_at)).all())
+
+
+class MrvRepository:
+    """Repository for auditable MRV evidence bundles and indicative impact records."""
+
+    def __init__(self, session: Session) -> None:
+        self._s = session
+
+    def record_evidence(
+        self,
+        *,
+        field_id: uuid.UUID,
+        evidence_type: str,
+        model_version: str,
+        inputs: dict[str, Any],
+        result: dict[str, Any],
+        sha256: str,
+        captured_at: datetime,
+        is_synthetic: bool = True,
+        evidence_id: uuid.UUID | None = None,
+    ) -> MrvEvidence:
+        row = MrvEvidence(
+            id=evidence_id or uuid.uuid4(),
+            field_id=field_id,
+            evidence_type=evidence_type,
+            model_version=model_version,
+            inputs=inputs,
+            result=result,
+            sha256=sha256,
+            captured_at=as_utc(captured_at),
+            is_synthetic=is_synthetic,
+        )
+        self._s.add(row)
+        self._s.flush()
+        return row
+
+    def get_evidence(self, evidence_id: uuid.UUID) -> MrvEvidence | None:
+        return self._s.get(MrvEvidence, evidence_id)
+
+    def list_evidence_by_field(self, field_id: uuid.UUID) -> list[MrvEvidence]:
+        stmt = select(MrvEvidence).where(MrvEvidence.field_id == field_id).order_by(MrvEvidence.captured_at)
+        return list(self._s.scalars(stmt).all())
+
+    def record_impact(
+        self,
+        *,
+        field_id: uuid.UUID,
+        season: str,
+        burn_avoided: bool,
+        area_acres: float,
+        est_co2e_kg_avoided: float | None,
+        method_note: str = "",
+        evidence_ids: list[str] | None = None,
+        record_sha256: str,
+        is_synthetic: bool = True,
+        status: ImpactRecordStatus = ImpactRecordStatus.INDICATIVE,
+        record_id: uuid.UUID | None = None,
+    ) -> ImpactRecord:
+        row = ImpactRecord(
+            id=record_id or uuid.uuid4(),
+            field_id=field_id,
+            season=season,
+            status=status,
+            label=IMPACT_LABEL,
+            burn_avoided=burn_avoided,
+            area_acres=area_acres,
+            est_co2e_kg_avoided=est_co2e_kg_avoided,
+            method_note=method_note,
+            evidence_ids=evidence_ids or [],
+            record_sha256=record_sha256,
+            is_synthetic=is_synthetic,
+        )
+        self._s.add(row)
+        self._s.flush()
+        return row
+
+    def get_impact(self, record_id: uuid.UUID) -> ImpactRecord | None:
+        return self._s.get(ImpactRecord, record_id)
+
+    def get_impact_by_field_season(self, field_id: uuid.UUID, season: str) -> ImpactRecord | None:
+        stmt = select(ImpactRecord).where(ImpactRecord.field_id == field_id, ImpactRecord.season == season)
+        return self._s.scalars(stmt).first()
+
+
+class FieldRepository:
+    """Repository for query and state updates on agricultural field rows."""
+
+    def __init__(self, session: Session) -> None:
+        self._s = session
+
+    def get_by_id(self, field_id: uuid.UUID) -> FieldRow | None:
+        return self._s.get(FieldRow, field_id)
+
+    def update_state(
+        self,
+        field_id: uuid.UUID,
+        *,
+        state: FieldState,
+        confidence: float,
+        updated_at: datetime | None = None,
+    ) -> FieldRow | None:
+        row = self._s.get(FieldRow, field_id)
+        if row is None:
+            return None
+        row.state = state
+        row.state_confidence = confidence
+        row.state_updated_at = as_utc(updated_at) if updated_at else as_utc(datetime.now())
+        self._s.flush()
+        return row
+
+    def list_by_district(self, district: str) -> list[FieldRow]:
+        stmt = select(FieldRow).where(FieldRow.district == district)
+        return list(self._s.scalars(stmt).all())

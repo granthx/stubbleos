@@ -1,13 +1,21 @@
-# Field Monitor Agent (Phase 4 Skeleton)
+# Field Monitor Agent
 
-## Purpose
-The Field Monitor agent ingests optical satellite imagery (Sentinel-2 NDVI) and thermal fire anomaly feeds (NASA FIRMS / VIIRS) to detect harvest progression and stubble burn incidents across agricultural fields.
+The **Field Monitor Agent** analyzes Sentinel-2 L2A optical satellite imagery and NASA FIRMS active fire detections to determine the real-time ground state of agricultural fields throughout the paddy harvesting and wheat sowing season.
 
-## Typed Contract
-- Input: `FieldMonitorInput` (district, field IDs, observation window).
-- Output: `FieldMonitorOutput` (satellite observations, counts of newly harvested and burned fields).
-- State: `FieldMonitorState`.
+## Responsibilities
+- Classifies each field into one of four mutually exclusive states:
+  - `NOT_HARVESTED`: Standing green crop.
+  - `HARVESTED_RESIDUE_PRESENT`: Significant drop in NDVI indicating harvest with straw on field.
+  - `CLEARED`: High Bare Soil Index (BSI) indicating baling, raking, or in-situ sowing completed.
+  - `BURN_DETECTED`: Active thermal anomaly detected by satellite (VIIRS/MODIS) or steep burn ratio drop.
+- Calculates an empirical confidence score for each observation.
+- Escalates ambiguous or low-confidence observations ($< \text{threshold}$) to the human coordinator's approval queue.
+- Emits typed `FieldStateChanged` and `BurnDetected` events on the event bus.
 
-## Tools
-- `sentinel2_harvest_detector_mock`: Simulates vegetative index changes indicating crop harvest.
-- `firms_thermal_anomaly_detector_mock`: Simulates thermal hotspot detection for burn tracking.
+## Remote Sensing Pipeline
+- **STAC Client**: Sentinel-2 L2A scene metadata via Earth Search / Planetary Computer with automatic offline fallback to committed fixtures.
+- **NASA FIRMS Client**: Active fire thermal hotspots with spatial polygon buffering.
+- **Indices**:
+  - $\text{NDVI} = \frac{\text{NIR} - \text{Red}}{\text{NIR} + \text{Red}}$
+  - $\text{BSI} = \frac{(\text{SWIR} + \text{Red}) - (\text{NIR} + \text{Blue})}{(\text{SWIR} + \text{Red}) + (\text{NIR} + \text{Blue})}$
+  - $\text{NBR} = \frac{\text{NIR} - \text{SWIR}}{\text{NIR} + \text{SWIR}}$

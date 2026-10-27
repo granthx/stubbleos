@@ -1,0 +1,28 @@
+{
+  "is_synthetic": true,
+  "label": "synthetic Open-Meteo multi-day weather forecast for Sangrur, Punjab (lat 30.24, lon 75.84)",
+  "latitude": 30.24,
+  "longitude": 75.84,
+  "elevation": 235.0,
+  "generationtime_ms": 0.12,
+  "utc_offset_seconds": 19800,
+  "timezone": "Asia/Kolkata",
+  "timezone_abbreviation": "IST",
+  "daily": {
+    "time": [
+      "2026-10-20",
+      "2026-10-21",
+      "2026-10-22",
+      "2026-10-23",
+      "2026-10-24",
+      "2026-10-25",
+      "2026-10-26"
+    ],
+    "precipitation_sum": [0.0, 0.0, 0.2, 12.5, 8.4, 0.0, 0.0],
+    "wind_speed_10m_max": [12.2, 14.1, 15.0, 28.4, 22.1, 10.5, 9.8],
+    "temperature_2m_max": [31.5, 32.0, 30.8, 26.2, 27.5, 29.8, 30.5],
+    "temperature_2m_min": [18.2, 18.5, 17.9, 16.5, 16.0, 16.8, 17.2],
+    "relative_humidity_2m_mean": [42.0, 44.5, 48.0, 78.5, 72.0, 50.0, 45.0],
+    "soil_moisture_0_to_7cm_mean": [0.18, 0.18, 0.20, 0.48, 0.42, 0.28, 0.22]
+  }
+}

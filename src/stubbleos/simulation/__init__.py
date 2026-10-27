@@ -26,6 +26,11 @@ from stubbleos.simulation.model import (
     SimulatedTruck,
     haversine_distance_km,
 )
+from stubbleos.simulation.sensor import (
+    DistrictSensorModel,
+    SensorConfig,
+    SyntheticObservation,
+)
 from stubbleos.simulation.simulator import DistrictSimulator
 from stubbleos.simulation.stochastic import (
     RainSchedule,
@@ -48,12 +53,14 @@ __all__ = [
     "BaselineBStrategy",
     "BuyerSpecConfig",
     "CoordinationStrategy",
+    "DistrictSensorModel",
     "DistrictSimulator",
     "DistrictSizeConfig",
     "DistrictState",
     "MachineCountsConfig",
     "RainSchedule",
     "ScenarioConfig",
+    "SensorConfig",
     "SimulatedBuyer",
     "SimulatedFarmer",
     "SimulatedField",
@@ -64,6 +71,7 @@ __all__ = [
     "StochasticParamsConfig",
     "StubbleOSCentralizedStrategy",
     "StubbleOSDecentralizedStrategy",
+    "SyntheticObservation",
     "aggregate_seed_metrics",
     "compute_confidence_intervals",
     "compute_run_metrics",

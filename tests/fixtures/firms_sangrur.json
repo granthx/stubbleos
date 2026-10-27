@@ -1,0 +1,59 @@
+{
+  "is_synthetic": true,
+  "label": "synthetic NASA FIRMS thermal anomaly hits for Sangrur District, Punjab (Kharif paddy stubble burn window)",
+  "district": "Sangrur",
+  "source": "VIIRS_SNPP_NRT",
+  "records": [
+    {
+      "latitude": 30.2451,
+      "longitude": 75.8342,
+      "brightness": 338.5,
+      "scan": 0.39,
+      "track": 0.36,
+      "acq_date": "2026-10-21",
+      "acq_time": "0815",
+      "satellite": "Suomi-NPP",
+      "instrument": "VIIRS",
+      "confidence": "nominal",
+      "confidence_pct": 75.0,
+      "version": "2.0NRT",
+      "bright_t31": 298.2,
+      "frp": 14.8,
+      "daynight": "D"
+    },
+    {
+      "latitude": 30.3120,
+      "longitude": 75.9215,
+      "brightness": 352.1,
+      "scan": 0.41,
+      "track": 0.38,
+      "acq_date": "2026-10-23",
+      "acq_time": "0830",
+      "satellite": "Suomi-NPP",
+      "instrument": "VIIRS",
+      "confidence": "high",
+      "confidence_pct": 92.0,
+      "version": "2.0NRT",
+      "bright_t31": 301.5,
+      "frp": 26.4,
+      "daynight": "D"
+    },
+    {
+      "latitude": 30.1890,
+      "longitude": 75.7650,
+      "brightness": 312.0,
+      "scan": 0.40,
+      "track": 0.37,
+      "acq_date": "2026-10-24",
+      "acq_time": "1940",
+      "satellite": "NOAA-20",
+      "instrument": "VIIRS",
+      "confidence": "low",
+      "confidence_pct": 42.0,
+      "version": "2.0NRT",
+      "bright_t31": 289.4,
+      "frp": 6.2,
+      "daynight": "N"
+    }
+  ]
+}

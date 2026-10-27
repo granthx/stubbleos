@@ -1,13 +1,11 @@
-# Weather & Window Agent (Phase 4 Skeleton)
+# Weather & Window Agent
 
-## Purpose
-The Weather & Window agent forecasts local weather conditions (precipitation, humidity, soil moisture) to compute feasible operational windows for machinery dispatch and baling.
+The **Weather & Window Agent** evaluates agricultural operating windows for harvesting, baling, and sowing operations based on multi-day meteorological forecasts from Open-Meteo.
 
-## Typed Contract
-- Input: `WeatherWindowInput` (district, date range).
-- Output: `WeatherWindowOutput` (daily workability status, rain probability, agronomic advisory).
-- State: `WeatherWindowState`.
-
-## Tools
-- `fetch_weather_forecast_mock`: Simulates precipitation and temperature predictions.
-- `check_drying_conditions_mock`: Evaluates straw moisture evaporation rates.
+## Responsibilities
+- Computes safe operating windows per field by checking:
+  - Precipitation $\le \text{max\_workable\_rain\_mm}$ (default 2.0 mm).
+  - Wind speed $\le \text{max\_workable\_wind\_kmh}$ (default 35.0 km/h).
+  - Soil moisture index $\le \text{max\_soil\_moisture\_index}$ (default 0.40).
+- Tracks days remaining to each field's wheat sowing deadline and identifies contiguous blocks of workable days.
+- Detects forecast shifts (e.g. rain delta $\ge \text{threshold}$) and automatically emits `ReplanTriggered` domain events.
