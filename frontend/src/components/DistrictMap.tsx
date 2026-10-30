@@ -157,3 +157,4 @@ export const DistrictMap: React.FC<MapProps> = ({ fields, machines }) => {
     </div>
   );
 };
+

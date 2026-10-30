@@ -75,3 +75,4 @@ export interface VernacularTurn {
   timestamp: string;
   is_urgent?: boolean;
 }
+

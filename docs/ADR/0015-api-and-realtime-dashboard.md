@@ -42,3 +42,4 @@ Previous phases established the discrete event simulator, OR-Tools optimizers, L
 - District officers and equipment operators have complete, real-time situational awareness.
 - Administrative interventions (approvals/rejections) synchronize with the agent orchestrator within milliseconds.
 - Third-party aggregators and carbon registries can programmatically query indicative MRV proofs and SHA-256 integrity hashes.
+

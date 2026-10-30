@@ -61,3 +61,4 @@ export const Header: React.FC<HeaderProps> = ({ district, onDistrictChange, burn
     </header>
   );
 };
+

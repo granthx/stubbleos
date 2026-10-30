@@ -59,3 +59,4 @@ export const MachineDispatchTable: React.FC<TableProps> = ({ machines }) => {
     </div>
   );
 };
+

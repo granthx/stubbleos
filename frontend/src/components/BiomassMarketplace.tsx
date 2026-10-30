@@ -45,3 +45,4 @@ export const BiomassMarketplace: React.FC = () => {
     </div>
   );
 };
+

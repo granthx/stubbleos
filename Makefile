@@ -1,4 +1,4 @@
-.PHONY: install lint format typecheck test test-int cov up down migrate revision demo clean
+.PHONY: install lint format typecheck test test-int cov up down migrate revision demo results benchmark chaos clean
 
 install:        ## install runtime + dev deps (creates uv.lock on first run; commit it)
 	uv sync --all-extras
@@ -35,6 +35,15 @@ revision:       ## usage: make revision m="add thing"
 
 demo:           ## run live demonstration server with full REST API and telemetry
 	uv run python -m stubbleos.demo
+
+results:        ## run reproducible evaluation matrix and update results table
+	uv run python -m stubbleos.evals.matrix
+
+benchmark:      ## run latency, throughput and scheduler performance benchmarks
+	uv run python -m stubbleos.evals.benchmarks
+
+chaos:          ## run adversarial chaos engineering resilience suite
+	uv run pytest tests/unit/test_phase8_chaos.py
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage

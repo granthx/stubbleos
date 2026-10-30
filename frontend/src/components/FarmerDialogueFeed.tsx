@@ -82,3 +82,4 @@ export const FarmerDialogueFeed: React.FC = () => {
     </div>
   );
 };
+

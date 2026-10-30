@@ -74,3 +74,4 @@ export const ApprovalQueue: React.FC<ApprovalProps> = ({ approvals, onResolve })
     </div>
   );
 };
+
