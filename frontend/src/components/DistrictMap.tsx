@@ -5,17 +5,34 @@ import { FieldInfo, MachineInfo } from "../types";
 interface MapProps {
   fields: FieldInfo[];
   machines: MachineInfo[];
+  district?: string;
 }
 
-export const DistrictMap: React.FC<MapProps> = ({ fields, machines }) => {
+export const DistrictMap: React.FC<MapProps> = ({ fields, machines, district = "sangrur" }) => {
   const [selectedField, setSelectedField] = useState<FieldInfo | null>(null);
 
-  // Normalize lat/lon to percentage inside SVG box
-  const minLat = 30.22, maxLat = 30.38;
-  const minLon = 75.80, maxLon = 75.98;
+  // Dynamically compute bounds from all fields and machines in the selected district
+  const allLats = [...fields.map((f) => f.center_lat), ...machines.map((m) => m.current_lat)];
+  const allLons = [...fields.map((f) => f.center_lon), ...machines.map((m) => m.current_lon)];
 
-  const toX = (lon: number) => Math.max(5, Math.min(95, ((lon - minLon) / (maxLon - minLon)) * 90 + 5));
-  const toY = (lat: number) => Math.max(5, Math.min(95, (1 - (lat - minLat) / (maxLat - minLat)) * 90 + 5));
+  let minLat = 30.22, maxLat = 30.38;
+  let minLon = 75.80, maxLon = 75.98;
+
+  if (allLats.length > 0 && allLons.length > 0) {
+    const rawMinLat = Math.min(...allLats);
+    const rawMaxLat = Math.max(...allLats);
+    const rawMinLon = Math.min(...allLons);
+    const rawMaxLon = Math.max(...allLons);
+    const padLat = Math.max(0.015, (rawMaxLat - rawMinLat) * 0.2);
+    const padLon = Math.max(0.015, (rawMaxLon - rawMinLon) * 0.2);
+    minLat = rawMinLat - padLat;
+    maxLat = rawMaxLat + padLat;
+    minLon = rawMinLon - padLon;
+    maxLon = rawMaxLon + padLon;
+  }
+
+  const toX = (lon: number) => Math.max(5, Math.min(95, ((lon - minLon) / Math.max(0.001, maxLon - minLon)) * 90 + 5));
+  const toY = (lat: number) => Math.max(5, Math.min(95, (1 - (lat - minLat) / Math.max(0.001, maxLat - minLat)) * 90 + 5));
 
   const stateColors: Record<string, { bg: string; border: string; label: string }> = {
     cleared: { bg: "fill-emerald-500/30", border: "stroke-emerald-400", label: "Cleared (No Fire Risk)" },
@@ -24,13 +41,19 @@ export const DistrictMap: React.FC<MapProps> = ({ fields, machines }) => {
     not_harvested: { bg: "fill-slate-600/20", border: "stroke-slate-500", label: "Standing Crop" },
   };
 
+  const burnCount = fields.filter((f) => f.state === "burn_detected").length;
+
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col h-[520px]">
       <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
         <div className="flex items-center gap-2">
           <Layers className="h-4 w-4 text-emerald-400" />
-          <h2 className="text-sm font-semibold text-white">Geospatial Field Monitoring & Route Map</h2>
-          <span className="text-xs text-slate-500 font-mono">(Sentinel-2 + NASA FIRMS + Live GPS)</span>
+          <h2 className="text-sm font-semibold text-white capitalize">{district} Geospatial Field Monitoring & Route Map</h2>
+          {burnCount > 0 && (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-950/80 text-red-400 border border-red-800 font-mono font-medium animate-pulse">
+              {burnCount} Anomalies
+            </span>
+          )}
         </div>
 
         {/* Legend */}

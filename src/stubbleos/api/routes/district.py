@@ -7,10 +7,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from stubbleos.api.auth import AuthenticatedUser, get_current_user
-from stubbleos.api.routes.approvals import MOCK_APPROVALS
+from stubbleos.api.routes.approvals import MOCK_APPROVALS, _seed_mock_approvals
 from stubbleos.api.routes.contracts import MOCK_CONTRACTS
-from stubbleos.api.routes.fields import MOCK_FIELDS
-from stubbleos.api.routes.machines import MOCK_MACHINES
+from stubbleos.api.routes.fields import MOCK_FIELDS, _seed_mock_fields
+from stubbleos.api.routes.machines import MOCK_MACHINES, _seed_mock_machines
 from stubbleos.api.schemas import DistrictSummaryResponse
 from stubbleos.core.types import ApprovalStatus, ContractStatus, FieldState, MachineStatus
 
@@ -22,6 +22,10 @@ def get_district_summary(
     district: str,
     user: Annotated[AuthenticatedUser, Depends(get_current_user)] = None,  # type: ignore[assignment]
 ) -> DistrictSummaryResponse:
+    _seed_mock_fields()
+    _seed_mock_machines()
+    _seed_mock_approvals()
+
     dist_lower = district.lower()
 
     fields = [f for f in MOCK_FIELDS.values() if f.district.lower() == dist_lower]
@@ -36,7 +40,11 @@ def get_district_summary(
     avoided_co2e = cleared_acres * 1.8  # ~1.8 tonnes CO2e avoided per acre
 
     active_machines = sum(1 for m in machines if m.status in {MachineStatus.IN_USE, MachineStatus.AVAILABLE})
-    pending_approvals = sum(1 for a in MOCK_APPROVALS.values() if a.status == ApprovalStatus.PENDING)
+    pending_approvals = sum(
+        1
+        for a in MOCK_APPROVALS.values()
+        if a.status == ApprovalStatus.PENDING and getattr(a, "district", "sangrur").lower() == dist_lower
+    )
     open_orders = sum(1 for c in MOCK_CONTRACTS.values() if c.status != ContractStatus.CANCELLED)
 
     burn_risk_idx = round(residue / max(1, total_fields), 2)

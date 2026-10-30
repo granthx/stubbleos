@@ -35,6 +35,7 @@ export const Header: React.FC<HeaderProps> = ({ district, onDistrictChange, burn
             className="bg-transparent font-medium text-white focus:outline-none cursor-pointer"
           >
             <option value="sangrur" className="bg-slate-900">Sangrur (Punjab)</option>
+            <option value="ludhiana" className="bg-slate-900">Ludhiana (Punjab)</option>
             <option value="patiala" className="bg-slate-900">Patiala (Punjab)</option>
             <option value="fatehgarh" className="bg-slate-900">Fatehgarh Sahib (Punjab)</option>
             <option value="karnal" className="bg-slate-900">Karnal (Haryana)</option>

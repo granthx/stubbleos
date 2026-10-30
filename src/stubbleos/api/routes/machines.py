@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,24 +15,104 @@ router = APIRouter(prefix="/machines", tags=["Machines"])
 
 MOCK_MACHINES: dict[UUID, MachineResponse] = {}
 
+DISTRICT_MACHINE_SPECS: dict[str, dict[str, Any]] = {
+    "sangrur": {
+        "lat": 30.250,
+        "lon": 75.850,
+        "operators": [
+            "Harpreet Singh",
+            "Gurjit Singh",
+            "Balwinder Kumar",
+            "Manpreet Dhillon",
+            "Sukhwinder Cheema",
+            "Jasvir Mann",
+        ],
+    },
+    "patiala": {
+        "lat": 30.340,
+        "lon": 76.400,
+        "operators": [
+            "Kuldeep Walia",
+            "Amrik Dhaliwal",
+            "Paramjit Sandhu",
+            "Jagjit Tiwana",
+            "Satnam Grewal",
+            "Gursewak Brar",
+        ],
+    },
+    "ludhiana": {
+        "lat": 30.880,
+        "lon": 75.860,
+        "operators": [
+            "Davinder Gill",
+            "Avtar Toor",
+            "Balraj Kahlon",
+            "Surjit Mangat",
+            "Jarnail Deol",
+            "Harnek Sekhon",
+        ],
+    },
+    "fatehgarh": {
+        "lat": 30.650,
+        "lon": 76.400,
+        "operators": [
+            "Ranjit Bajwa",
+            "Hardev Virk",
+            "Bhupinder Sahi",
+            "Karamjit Sidhu",
+            "Charanjit Ghuman",
+            "Narinder Bhatti",
+        ],
+    },
+    "karnal": {
+        "lat": 29.700,
+        "lon": 76.990,
+        "operators": [
+            "Virender Rathi",
+            "Sunil Kamboj",
+            "Ramesh Dahiya",
+            "Sanjay Punia",
+            "Mukesh Malik",
+            "Anil Jaglan",
+        ],
+    },
+}
+
 
 def _seed_mock_machines() -> None:
     if MOCK_MACHINES:
         return
-    for i in range(1, 7):
-        m_id = UUID(f"00000000-0000-0000-0001-{i:012d}")
-        m_type = MachineType.SUPER_SEEDER if i % 2 == 1 else MachineType.BALER
-        m_status = MachineStatus.AVAILABLE if i <= 4 else MachineStatus.IN_USE
-        MOCK_MACHINES[m_id] = MachineResponse(
-            id=m_id,
-            machine_type=m_type,
-            district="sangrur",
-            status=m_status,
-            current_lat=30.250 + (i * 0.015),
-            current_lon=75.850 + (i * 0.012),
-            capacity_acres_per_day=15.0 if m_type == MachineType.SUPER_SEEDER else 25.0,
-            operator_name=f"Harpreet Singh {i}",
-        )
+    m_types = [
+        MachineType.SUPER_SEEDER,
+        MachineType.BALER,
+        MachineType.HAPPY_SEEDER,
+        MachineType.BALER,
+        MachineType.SUPER_SEEDER,
+        MachineType.RAKE,
+    ]
+    for d_counter, (dist_name, spec) in enumerate(DISTRICT_MACHINE_SPECS.items(), start=1):
+        for i, op_name in enumerate(spec["operators"], start=1):
+            m_id = UUID(f"00000000-0000-0001-{d_counter:04d}-{i:012d}")
+            m_type = m_types[(i - 1) % len(m_types)]
+            m_status = MachineStatus.IN_USE if (i % 2 == 1) else MachineStatus.AVAILABLE
+            lat = float(spec["lat"]) + ((i % 3) * 0.015) - 0.015
+            lon = float(spec["lon"]) + ((i // 3) * 0.015) - 0.015
+            cap = (
+                15.0
+                if m_type == MachineType.SUPER_SEEDER
+                else (25.0 if m_type == MachineType.BALER else 12.0)
+            )
+
+            MOCK_MACHINES[m_id] = MachineResponse(
+                id=m_id,
+                machine_type=m_type,
+                district=dist_name,
+                status=m_status,
+                current_lat=round(lat, 4),
+                current_lon=round(lon, 4),
+                capacity_acres_per_day=cap,
+                operator_name=op_name,
+            )
 
 
 _seed_mock_machines()

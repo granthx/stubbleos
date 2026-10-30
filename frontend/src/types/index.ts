@@ -32,6 +32,7 @@ export interface ApprovalItem {
   id: string;
   kind: string;
   subject_id: string;
+  district?: string;
   reason: string;
   status: ApprovalStatus;
   confidence?: number;

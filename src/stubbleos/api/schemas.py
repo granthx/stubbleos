@@ -115,6 +115,7 @@ class ApprovalResponse(BaseModel):
     id: UUID
     kind: str
     subject_id: UUID
+    district: str = "sangrur"
     reason: str
     status: ApprovalStatus
     confidence: float | None = None

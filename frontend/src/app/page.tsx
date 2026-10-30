@@ -32,7 +32,7 @@ export default function DashboardPage() {
         fetchDistrictSummary(targetDistrict),
         fetchFields(targetDistrict),
         fetchMachines(targetDistrict),
-        fetchApprovals(),
+        fetchApprovals(targetDistrict),
       ]);
       setSummary(sumData);
       setFields(fldData);
@@ -73,7 +73,7 @@ export default function DashboardPage() {
         {/* Central Map & Fleet Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <DistrictMap fields={fields} machines={machines} />
+            <DistrictMap fields={fields} machines={machines} district={district} />
           </div>
           <div className="flex flex-col gap-6">
             <ApprovalQueue approvals={approvals} onResolve={handleResolveApproval} />

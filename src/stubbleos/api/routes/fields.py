@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -17,28 +17,71 @@ router = APIRouter(prefix="/fields", tags=["Fields"])
 MOCK_FIELDS: dict[UUID, FieldResponse] = {}
 
 
+DISTRICT_SPECS: dict[str, dict[str, Any]] = {
+    "sangrur": {
+        "prefix": "PB-SAN",
+        "lat_base": 30.245,
+        "lon_base": 75.842,
+        "burn_idx": {5},
+    },
+    "patiala": {
+        "prefix": "PB-PAT",
+        "lat_base": 30.330,
+        "lon_base": 76.390,
+        "burn_idx": {4, 9},
+    },
+    "ludhiana": {
+        "prefix": "PB-LUD",
+        "lat_base": 30.880,
+        "lon_base": 75.850,
+        "burn_idx": {3, 8},
+    },
+    "fatehgarh": {
+        "prefix": "PB-FGS",
+        "lat_base": 30.640,
+        "lon_base": 76.390,
+        "burn_idx": {6},
+    },
+    "karnal": {
+        "prefix": "HR-KAR",
+        "lat_base": 29.690,
+        "lon_base": 76.980,
+        "burn_idx": {2, 7},
+    },
+}
+
+
 def _seed_mock_fields() -> None:
     if MOCK_FIELDS:
         return
-    for i in range(1, 11):
-        f_id = UUID(f"00000000-0000-0000-0000-{i:012d}")
-        state = (
-            FieldState.CLEARED
-            if i <= 4
-            else (FieldState.BURN_DETECTED if i == 5 else FieldState.HARVESTED_RESIDUE_PRESENT)
-        )
-        MOCK_FIELDS[f_id] = FieldResponse(
-            id=f_id,
-            farmer_id=uuid4(),
-            district="sangrur",
-            village_code=f"PB-SAN-00{i}",
-            area_acres=float(2.0 + (i % 5)),
-            state=state,
-            state_confidence=0.92,
-            burn_risk_score=0.85 if state == FieldState.HARVESTED_RESIDUE_PRESENT else 0.1,
-            center_lat=30.245 + (i * 0.01),
-            center_lon=75.842 + (i * 0.01),
-        )
+    for d_counter, (dist_name, spec) in enumerate(DISTRICT_SPECS.items(), start=1):
+        for i in range(1, 11):
+            f_id = UUID(f"00000000-0000-0000-{d_counter:04d}-{i:012d}")
+            is_burn = i in spec["burn_idx"]
+            is_cleared = (i <= 4) and not is_burn
+            state = (
+                FieldState.BURN_DETECTED
+                if is_burn
+                else (FieldState.CLEARED if is_cleared else FieldState.HARVESTED_RESIDUE_PRESENT)
+            )
+            burn_score = (
+                0.96 if is_burn else (0.82 if state == FieldState.HARVESTED_RESIDUE_PRESENT else 0.08)
+            )
+            lat = float(spec["lat_base"]) + ((i % 4) * 0.02) - 0.03
+            lon = float(spec["lon_base"]) + ((i // 4) * 0.02) - 0.02
+
+            MOCK_FIELDS[f_id] = FieldResponse(
+                id=f_id,
+                farmer_id=uuid4(),
+                district=dist_name,
+                village_code=f"{spec['prefix']}-00{i}",
+                area_acres=float(2.0 + (i % 5)),
+                state=state,
+                state_confidence=0.94 if is_burn else 0.91,
+                burn_risk_score=burn_score,
+                center_lat=round(lat, 4),
+                center_lon=round(lon, 4),
+            )
 
 
 _seed_mock_fields()
