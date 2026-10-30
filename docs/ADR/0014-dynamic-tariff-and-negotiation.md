@@ -37,3 +37,4 @@ The paddy harvest window in Northwest India is intensely compressed (15 to 20 da
 - Prevents monopolistic price gouging during the critical burning window.
 - Guarantees financial viability for baler operators and transport fleets.
 - Provides tamper-evident audit trails for registry verification and carbon credit validation.
+

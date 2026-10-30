@@ -39,3 +39,4 @@ Furthermore:
 - Farmers can book machines via voice calls or WhatsApp in their native language.
 - Zero PII leaks into analytics or event bus streams.
 - Critical burn threats are intercepted and surfaced to district coordinators within seconds.
+

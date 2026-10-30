@@ -33,8 +33,8 @@ migrate:
 revision:       ## usage: make revision m="add thing"
 	uv run alembic revision -m "$(m)"
 
-demo:
-	@echo "make demo arrives in Phase 7/8 (needs simulator, agents, dashboard). Nothing to run yet."; exit 2
+demo:           ## run live demonstration server with full REST API and telemetry
+	uv run python -m stubbleos.demo
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage
