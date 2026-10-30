@@ -18,6 +18,8 @@ from stubbleos.core.types import (
     ApprovalStatus,
     Channel,
     ConsentPurpose,
+    ContractStatus,
+    ConversationStatus,
     FieldState,
     ImpactRecordStatus,
     Language,
@@ -29,6 +31,9 @@ from stubbleos.data.models import (
     Approval,
     AuditLog,
     Consent,
+    Contract,
+    Conversation,
+    ConversationMessage,
     FieldRow,
     ImpactRecord,
     MrvEvidence,
@@ -460,3 +465,218 @@ class FieldRepository:
     def list_by_district(self, district: str) -> list[FieldRow]:
         stmt = select(FieldRow).where(FieldRow.district == district)
         return list(self._s.scalars(stmt).all())
+
+
+# =============================================================================== Phase-6 repositories
+
+
+class ConversationRepository:
+    """Manages conversations (core schema) and turns (pii schema)."""
+
+    def __init__(self, session: Session) -> None:
+        self._s = session
+
+    def create_conversation(
+        self,
+        *,
+        farmer_id: uuid.UUID,
+        channel: Channel,
+        language: Language,
+        started_at: datetime | None = None,
+        conversation_id: uuid.UUID | None = None,
+    ) -> Conversation:
+        row = Conversation(
+            id=conversation_id or uuid.uuid4(),
+            farmer_id=farmer_id,
+            channel=channel,
+            language=language,
+            status=ConversationStatus.OPEN,
+            started_at=as_utc(started_at) if started_at else as_utc(datetime.now()),
+        )
+        self._s.add(row)
+        self._s.flush()
+        return row
+
+    def add_message(
+        self,
+        *,
+        conversation_id: uuid.UUID,
+        role: str,
+        content: str,
+        created_at: datetime | None = None,
+        message_id: uuid.UUID | None = None,
+    ) -> ConversationMessage:
+        msg = ConversationMessage(
+            id=message_id or uuid.uuid4(),
+            conversation_id=conversation_id,
+            role=role,
+            content=content,
+            created_at=as_utc(created_at) if created_at else as_utc(datetime.now()),
+        )
+        self._s.add(msg)
+        self._s.flush()
+        return msg
+
+    def get_conversation(self, conversation_id: uuid.UUID) -> Conversation | None:
+        return self._s.get(Conversation, conversation_id)
+
+    def get_messages(self, conversation_id: uuid.UUID) -> list[ConversationMessage]:
+        stmt = (
+            select(ConversationMessage)
+            .where(ConversationMessage.conversation_id == conversation_id)
+            .order_by(ConversationMessage.created_at.asc())
+        )
+        return list(self._s.scalars(stmt).all())
+
+    def close_conversation(
+        self,
+        conversation_id: uuid.UUID,
+        *,
+        status: ConversationStatus = ConversationStatus.COMPLETED,
+        outcome: dict[str, Any] | None = None,
+        ended_at: datetime | None = None,
+    ) -> Conversation | None:
+        row = self.get_conversation(conversation_id)
+        if row is None:
+            return None
+        row.status = status
+        row.outcome = outcome
+        row.ended_at = as_utc(ended_at) if ended_at else as_utc(datetime.now())
+        self._s.flush()
+        return row
+
+
+class ContractRepository:
+    """Manages negotiated straw supply and baling contracts."""
+
+    def __init__(self, session: Session) -> None:
+        self._s = session
+
+    def create_contract(
+        self,
+        *,
+        field_id: uuid.UUID,
+        farmer_id: uuid.UUID,
+        price_inr_per_tonne: float,
+        tonnes_agreed: float,
+        order_id: uuid.UUID | None = None,
+        buyer_id: uuid.UUID | None = None,
+        terms: dict[str, Any] | None = None,
+        contract_sha256: str | None = None,
+        status: ContractStatus = ContractStatus.DRAFT,
+        contract_id: uuid.UUID | None = None,
+    ) -> Contract:
+        contract_terms = terms or {}
+        sha = (
+            contract_sha256
+            or hashlib.sha256(
+                f"{field_id}:{farmer_id}:{buyer_id}:{price_inr_per_tonne}:{tonnes_agreed}".encode()
+            ).hexdigest()
+        )
+
+        row = Contract(
+            id=contract_id or uuid.uuid4(),
+            order_id=order_id,
+            field_id=field_id,
+            farmer_id=farmer_id,
+            buyer_id=buyer_id,
+            terms=contract_terms,
+            price_inr_per_tonne=price_inr_per_tonne,
+            tonnes_agreed=tonnes_agreed,
+            status=status,
+            contract_sha256=sha,
+            created_at=as_utc(datetime.now()),
+        )
+        self._s.add(row)
+        self._s.flush()
+        return row
+
+    def get_by_id(self, contract_id: uuid.UUID) -> Contract | None:
+        return self._s.get(Contract, contract_id)
+
+    def mark_accepted(self, contract_id: uuid.UUID, accepted_at: datetime | None = None) -> Contract | None:
+        row = self.get_by_id(contract_id)
+        if row is None:
+            return None
+        row.status = ContractStatus.ACCEPTED
+        row.accepted_at = as_utc(accepted_at) if accepted_at else as_utc(datetime.now())
+        self._s.flush()
+        return row
+
+    def list_by_farmer(self, farmer_id: uuid.UUID) -> list[Contract]:
+        stmt = select(Contract).where(Contract.farmer_id == farmer_id).order_by(Contract.created_at.desc())
+        return list(self._s.scalars(stmt).all())
+
+    def list_by_buyer(self, buyer_id: uuid.UUID) -> list[Contract]:
+        stmt = select(Contract).where(Contract.buyer_id == buyer_id).order_by(Contract.created_at.desc())
+        return list(self._s.scalars(stmt).all())
+
+
+@dataclass
+class DocumentMatch:
+    doc_id: str
+    text: str
+    similarity: float
+    metadata: dict[str, Any]
+
+
+class VectorMemoryRepository:
+    """Document and conversation semantic memory store.
+
+    Uses cosine similarity for semantic retrieval. Operates in-memory or backed by
+    pgvector embeddings when available.
+    """
+
+    def __init__(self) -> None:
+        self._documents: dict[str, dict[str, Any]] = {}
+
+    def add_document(
+        self,
+        doc_id: str,
+        text: str,
+        embedding: list[float],
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        self._documents[doc_id] = {
+            "text": text,
+            "embedding": embedding,
+            "metadata": metadata or {},
+        }
+
+    def search_similar(
+        self,
+        query_embedding: list[float],
+        top_k: int = 3,
+        min_similarity: float = 0.0,
+    ) -> list[DocumentMatch]:
+        if not self._documents or not query_embedding:
+            return []
+
+        import numpy as np
+
+        q_vec = np.array(query_embedding, dtype=float)
+        q_norm = np.linalg.norm(q_vec)
+        if q_norm == 0:
+            return []
+
+        matches: list[DocumentMatch] = []
+        for doc_id, doc in self._documents.items():
+            d_vec = np.array(doc["embedding"], dtype=float)
+            d_norm = np.linalg.norm(d_vec)
+            sim = 0.0 if d_norm == 0 else float(np.dot(q_vec, d_vec) / (q_norm * d_norm))
+
+            if sim >= min_similarity:
+                matches.append(
+                    DocumentMatch(
+                        doc_id=doc_id,
+                        text=doc["text"],
+                        similarity=round(sim, 4),
+                        metadata=doc["metadata"],
+                    )
+                )
+
+        matches.sort(key=lambda m: m.similarity, reverse=True)
+        return matches[:top_k]
+
+    def clear(self) -> None:
+        self._documents.clear()

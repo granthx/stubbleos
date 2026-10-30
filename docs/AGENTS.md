@@ -134,23 +134,28 @@ flowchart TB
 
 ---
 
-## 8. Farmer Voice Agent (Phase 4 Skeleton)
+## 8. Farmer Voice Agent (Phase 6 Implementation)
 
 - **Package**: `stubbleos.agents.farmer_voice`
-- **Role**: Automated vernacular conversational dialogue (Punjabi, Hindi, English) for machine booking.
-- **Inputs**: `FarmerVoiceInput` (farmer ID, conversation ID, language, message text/audio).
-- **Outputs**: `FarmerVoiceOutput` (vernacular reply, detected intent, escalation flag).
-- **Tools**: `transcribe_audio_mock`, `synthesize_speech_mock`.
+- **Role**: Automated vernacular conversational dialogue (Gurmukhi/Roman Punjabi, Devanagari/Roman Hindi, English) for machine booking, schedule queries, cancellations, and urgent fire threat de-escalation.
+- **Inputs**: `FarmerVoiceInput` (farmer ID, conversation ID, language, inbound text/audio, channel, timestamp).
+- **Outputs**: `FarmerVoiceOutput` (vernacular reply, language, detected intent, confidence, requires_human_escalation, escalation_reason, action_requested, booking_draft, slots, audio_uri).
+- **Dialogue Engine**: Multi-turn slot filling (`FarmerVoiceSlotState` for acreage, machine type, village, target date) with fallback to `PromptRegistry` templates.
+- **Urgent Escalation**: Flags burn threats ("ਅੱਗ ਲਾ ਦੇਵਾਂਗਾ", "will burn") immediately to human queue with critical priority.
+- **Tools**: `transcribe_audio_mock`, `synthesize_speech_mock`, `lookup_farmer_profile_tool`, `search_policy_memory_tool`.
+- **Memory**: `FarmerMemoryStore` / `VectorMemoryRepository` vector search over CRM subsidy policies and previous interaction turns.
 
 ---
 
-## 9. Pricing & Negotiation Agent (Phase 4 Skeleton)
+## 9. Pricing & Negotiation Agent (Phase 6 Implementation)
 
 - **Package**: `stubbleos.agents.pricing_negotiation`
-- **Role**: Dynamic tariff quotes with smallholder concessions.
-- **Inputs**: `PricingInput` (farmer ID, field ID, landholding class, service type, area).
-- **Outputs**: `PricingOutput` (`TariffQuote` with base tariff, discount, and net cost).
-- **Tools**: `compute_dynamic_tariff_mock`.
+- **Role**: Dynamic tiered machinery tariffs, smallholder cross-subsidies, surge caps, moisture penalties, and multi-turn Contract-Net industrial biomass buyer negotiation.
+- **Inputs**: `PricingInput` (farmer ID, field ID, landholding class, service type, area, estimated tonnes, moisture percentage, days to deadline, scarcity ratio).
+- **Outputs**: `PricingOutput` (`TariffQuote` with base tariff, smallholder discount, surge amount, moisture penalty, net price, and 75/15/10 operator/logistics/platform settlement).
+- **Biomass Bargaining**: Evaluates buyer bids (`BiomassOffer`) against reservation thresholds and executes multi-turn concession curves (`negotiate_biomass_bid`).
+- **Cryptographic Contracts**: Produces tamper-evident `ContractTermsDraft` stamped with SHA-256 fingerprint (`draft_contract_terms`).
+- **Tools**: `compute_dynamic_tariff_mock`, `evaluate_buyer_bid_tool`, `draft_contract_tool`.
 
 ---
 

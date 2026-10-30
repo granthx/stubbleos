@@ -32,9 +32,13 @@ from stubbleos.core.logging import get_logger
 from stubbleos.core.metrics import EVENTS_PUBLISHED, HANDLER_ERRORS
 from stubbleos.core.types import (
     ApprovalStatus,
+    Channel,
     Confidence,
     FieldState,
+    Language,
+    MachineType,
     ReplanReason,
+    ServiceType,
     StrictModel,
 )
 
@@ -190,6 +194,84 @@ class PolicyViolationDetected(EventPayload):
     severity: Literal["info", "warning", "blocking"]
     action_ref: str
     detail: str
+
+
+# --------------------------------------------------------------------------- Phase-6 payloads
+
+
+@register_event("farmer.inbound_message")
+class FarmerInboundMessage(EventPayload):
+    farmer_id: UUID
+    conversation_id: UUID
+    channel: Channel
+    language: Language
+    message_text: str
+    audio_uri: str | None = None
+    detected_intent: str | None = None
+
+
+@register_event("farmer.outbound_message")
+class FarmerOutboundMessage(EventPayload):
+    farmer_id: UUID
+    conversation_id: UUID
+    channel: Channel
+    language: Language
+    message_text: str
+    audio_uri: str | None = None
+
+
+@register_event("booking.requested")
+class BookingRequested(EventPayload):
+    booking_id: UUID
+    farmer_id: UUID
+    field_id: UUID
+    service_type: ServiceType
+    machine_type: MachineType | None = None
+    area_acres: float
+    target_date: str
+
+
+@register_event("pricing.tariff_quote_generated")
+class TariffQuoteGenerated(EventPayload):
+    quote_id: UUID
+    farmer_id: UUID
+    field_id: UUID
+    service_type: ServiceType
+    base_rate_inr: float
+    subsidy_discount_inr: float
+    net_price_inr: float
+    is_concessional: bool
+
+
+@register_event("negotiation.offer_submitted")
+class NegotiationOfferSubmitted(EventPayload):
+    session_id: UUID
+    buyer_id: UUID
+    round_number: int
+    offered_price_per_tonne_inr: float
+    tonnes: float
+    delivery_term: str
+
+
+@register_event("negotiation.concluded")
+class NegotiationConcluded(EventPayload):
+    session_id: UUID
+    buyer_id: UUID
+    agreed: bool
+    final_price_per_tonne_inr: float | None = None
+    tonnes_agreed: float | None = None
+    contract_id: UUID | None = None
+
+
+@register_event("farmer.escalation_triggered")
+class HumanEscalationTriggered(EventPayload):
+    escalation_id: UUID
+    farmer_id: UUID
+    conversation_id: UUID
+    reason: str
+    urgency: Literal["low", "medium", "critical"] = "medium"
+    detected_intent: str | None = None
+    farmer_quote: str | None = None
 
 
 # --------------------------------------------------------------------------- buses
