@@ -19,3 +19,31 @@ body {
   min-height: 100vh;
 }
 
+@keyframes mapDash {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-route-flow {
+  animation: mapDash 1.4s linear infinite;
+}
+
+@keyframes radarWave {
+  0% {
+    r: 6;
+    opacity: 0.9;
+  }
+  100% {
+    r: 28;
+    opacity: 0;
+  }
+}
+
+.animate-radar-ring {
+  animation: radarWave 2s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+}
+

@@ -1,5 +1,22 @@
-import React, { useEffect, useState } from "react";
-import { Flame, Layers, MapPin, Navigation, Tractor } from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Compass,
+  Crosshair,
+  Eye,
+  Flame,
+  Layers,
+  MapPin,
+  Maximize2,
+  Minimize2,
+  Navigation,
+  RefreshCw,
+  SlidersHorizontal,
+  Tractor,
+  Volume2,
+  Wheat,
+  X,
+  Zap,
+} from "lucide-react";
 import { FieldInfo, MachineInfo } from "../types";
 
 interface MapProps {
@@ -8,216 +25,1272 @@ interface MapProps {
   district?: string;
 }
 
-export const DistrictMap: React.FC<MapProps> = ({ fields, machines, district = "sangrur" }) => {
-  const [selectedField, setSelectedField] = useState<FieldInfo | null>(null);
+interface DistrictConfig {
+  name: string;
+  state: string;
+  centerLat: number;
+  centerLon: number;
+  corridorName: string;
+  canalName: string;
+  chcHubName: string;
+  villages: { name: string; dlat: number; dlon: number }[];
+}
 
-  // Reset selected field when district changes to prevent stuck modal glitches
+const DISTRICT_CONFIGS: Record<string, DistrictConfig> = {
+  sangrur: {
+    name: "Sangrur",
+    state: "Punjab",
+    centerLat: 30.245,
+    centerLon: 75.842,
+    corridorName: "NH-7 (Sangrur - Dhuri - Barnala Corridor)",
+    canalName: "Bathinda Branch · Sirhind Canal Network",
+    chcHubName: "CHC Sangrur Central Agri-Hub",
+    villages: [
+      { name: "Dhuri", dlat: 0.025, dlon: -0.015 },
+      { name: "Sunam", dlat: -0.026, dlon: 0.018 },
+      { name: "Bhawanigarh", dlat: 0.015, dlon: 0.028 },
+      { name: "Longowal", dlat: -0.022, dlon: -0.025 },
+    ],
+  },
+  patiala: {
+    name: "Patiala",
+    state: "Punjab",
+    centerLat: 30.33,
+    centerLon: 76.39,
+    corridorName: "NH-64 (Patiala - Nabha - Sangrur Expressway)",
+    canalName: "Bhakra Main Line (BML Feeder Canal)",
+    chcHubName: "CHC Patiala East Depot",
+    villages: [
+      { name: "Nabha", dlat: 0.024, dlon: -0.022 },
+      { name: "Samana", dlat: -0.028, dlon: 0.015 },
+      { name: "Rajpura", dlat: 0.028, dlon: 0.025 },
+      { name: "Sanaur", dlat: -0.018, dlon: -0.02 },
+    ],
+  },
+  ludhiana: {
+    name: "Ludhiana",
+    state: "Punjab",
+    centerLat: 30.88,
+    centerLon: 75.85,
+    corridorName: "NH-5 / NH-44 (Ludhiana - Khanna Agro-Belt)",
+    canalName: "Sidhwan Canal & Sutlej River Basin Network",
+    chcHubName: "CHC Ludhiana South CHC Cluster",
+    villages: [
+      { name: "Khanna", dlat: 0.026, dlon: 0.024 },
+      { name: "Jagraon", dlat: -0.025, dlon: -0.026 },
+      { name: "Samrala", dlat: 0.022, dlon: -0.018 },
+      { name: "Doraha", dlat: -0.019, dlon: 0.022 },
+    ],
+  },
+  fatehgarh: {
+    name: "Fatehgarh Sahib",
+    state: "Punjab",
+    centerLat: 30.64,
+    centerLon: 76.39,
+    corridorName: "GT Road / Sirhind Bypass Agricultural Link",
+    canalName: "Sirhind Feeder & Narwana Branch Canal",
+    chcHubName: "CHC Sirhind Mandi Central Depot",
+    villages: [
+      { name: "Sirhind", dlat: -0.015, dlon: -0.015 },
+      { name: "Mandi Gobindgarh", dlat: 0.028, dlon: 0.02 },
+      { name: "Bassi Pathana", dlat: 0.022, dlon: -0.024 },
+      { name: "Khamano", dlat: -0.024, dlon: 0.025 },
+    ],
+  },
+  karnal: {
+    name: "Karnal",
+    state: "Haryana",
+    centerLat: 29.69,
+    centerLon: 76.98,
+    corridorName: "NH-44 (Grand Trunk Road · Nilokheri - Gharaunda)",
+    canalName: "Western Yamuna Canal (Augmentation Branch)",
+    chcHubName: "CHC Karnal ICAR-CSSRI Farm Machinery Hub",
+    villages: [
+      { name: "Nilokheri", dlat: 0.028, dlon: -0.018 },
+      { name: "Gharaunda", dlat: -0.026, dlon: 0.015 },
+      { name: "Indri", dlat: 0.024, dlon: 0.026 },
+      { name: "Assandh", dlat: -0.022, dlon: -0.024 },
+    ],
+  },
+};
+
+export const DistrictMap: React.FC<MapProps> = ({ fields, machines, district = "sangrur" }) => {
+  const dKey = district.toLowerCase();
+  const config = DISTRICT_CONFIGS[dKey] || DISTRICT_CONFIGS.sangrur;
+
+  // Selected state
+  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+  const [selectedMachineId, setSelectedMachineId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<"all" | "burn" | "residue" | "fleet" | "cleared">("all");
+  const [fastDispatchedIds, setFastDispatchedIds] = useState<Record<string, boolean>>({});
+
+  // Layer visibility toggles
+  const [showRoads, setShowRoads] = useState(true);
+  const [showRoutes, setShowRoutes] = useState(true);
+  const [showThermal, setShowThermal] = useState(true);
+  const [showGrid, setShowGrid] = useState(true);
+
+  // Zoom and Pan
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef({ x: 0, y: 0 });
+
+  // Reset selections when district changes
   useEffect(() => {
-    setSelectedField(null);
+    setSelectedFieldId(null);
+    setSelectedMachineId(null);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+    setFastDispatchedIds({});
   }, [district]);
 
-  // Dynamically compute bounds from all fields and machines in the selected district
-  const allLats = [...fields.map((f) => f.center_lat), ...machines.map((m) => m.current_lat)];
-  const allLons = [...fields.map((f) => f.center_lon), ...machines.map((m) => m.current_lon)];
+  // Canvas coordinate space
+  const CANVAS_W = 960;
+  const CANVAS_H = 540;
+  const PADDING = 60;
 
-  let minLat = 30.20, maxLat = 30.40;
-  let minLon = 75.75, maxLon = 76.00;
+  // Compute realistic spatial bounds around the district center
+  const { minLon, maxLon, minLat, maxLat } = useMemo(() => {
+    const lats = fields.map((f) => f.center_lat).concat(machines.map((m) => m.current_lat));
+    const lons = fields.map((f) => f.center_lon).concat(machines.map((m) => m.current_lon));
 
-  if (allLats.length > 0 && allLons.length > 0) {
-    const rawMinLat = Math.min(...allLats);
-    const rawMaxLat = Math.max(...allLats);
-    const rawMinLon = Math.min(...allLons);
-    const rawMaxLon = Math.max(...allLons);
-    const padLat = Math.max(0.015, (rawMaxLat - rawMinLat) * 0.22);
-    const padLon = Math.max(0.015, (rawMaxLon - rawMinLon) * 0.22);
-    minLat = rawMinLat - padLat;
-    maxLat = rawMaxLat + padLat;
-    minLon = rawMinLon - padLon;
-    maxLon = rawMaxLon + padLon;
-  }
+    const centerLat = config.centerLat;
+    const centerLon = config.centerLon;
 
-  const toX = (lon: number) => Math.max(8, Math.min(92, ((lon - minLon) / Math.max(0.001, maxLon - minLon)) * 84 + 8));
-  const toY = (lat: number) => Math.max(8, Math.min(92, (1 - (lat - minLat) / Math.max(0.001, maxLat - minLat)) * 84 + 8));
+    const baseMinLat = lats.length > 0 ? Math.min(...lats) : centerLat - 0.04;
+    const baseMaxLat = lats.length > 0 ? Math.max(...lats) : centerLat + 0.04;
+    const baseMinLon = lons.length > 0 ? Math.min(...lons) : centerLon - 0.04;
+    const baseMaxLon = lons.length > 0 ? Math.max(...lons) : centerLon + 0.04;
 
-  const stateColors: Record<string, { bg: string; border: string; label: string }> = {
-    cleared: { bg: "fill-emerald-500/30", border: "stroke-emerald-400", label: "Cleared (No Fire Risk)" },
-    harvested_residue_present: { bg: "fill-amber-500/30", border: "stroke-amber-400", label: "Harvested (Residue Present)" },
-    burn_detected: { bg: "fill-red-500/50", border: "stroke-red-400", label: "Active Fire Alert (FIRMS)" },
-    not_harvested: { bg: "fill-slate-600/20", border: "stroke-slate-500", label: "Standing Crop" },
+    const latSpan = Math.max(0.07, baseMaxLat - baseMinLat);
+    const lonSpan = Math.max(0.08, baseMaxLon - baseMinLon);
+
+    const midLat = (baseMinLat + baseMaxLat) / 2;
+    const midLon = (baseMinLon + baseMaxLon) / 2;
+
+    const padLat = latSpan * 0.42;
+    const padLon = lonSpan * 0.42;
+
+    return {
+      minLat: midLat - padLat,
+      maxLat: midLat + padLat,
+      minLon: midLon - padLon,
+      maxLon: midLon + padLon,
+    };
+  }, [fields, machines, config]);
+
+  // Coordinate projection mapping lat/lon to fixed SVG space (960 x 540)
+  const projectX = (lon: number) => {
+    const ratio = (lon - minLon) / Math.max(0.0001, maxLon - minLon);
+    return PADDING + ratio * (CANVAS_W - 2 * PADDING);
   };
 
-  const getPolygonPoints = (cx: number, cy: number, index: number) => {
-    const shapes = [
-      `${cx - 3.2},${cy - 2.2} ${cx + 3.4},${cy - 2.5} ${cx + 3.1},${cy + 2.3} ${cx - 2.9},${cy + 2.6}`,
-      `${cx - 4.2},${cy - 1.8} ${cx + 4.0},${cy - 1.6} ${cx + 3.7},${cy + 1.9} ${cx - 3.9},${cy + 2.1}`,
-      `${cx - 2.8},${cy - 3.1} ${cx + 2.7},${cy - 2.0} ${cx + 3.4},${cy + 2.8} ${cx - 3.0},${cy + 2.2}`,
-      `${cx - 3.5},${cy - 2.5} ${cx + 3.6},${cy - 2.4} ${cx + 3.3},${cy + 3.0} ${cx - 3.1},${cy + 2.8}`,
-      `${cx - 2.3},${cy - 2.9} ${cx + 3.5},${cy - 1.9} ${cx + 2.7},${cy + 2.8} ${cx - 3.3},${cy + 2.0}`,
+  const projectY = (lat: number) => {
+    // Invert Y so North is up
+    const ratio = (lat - minLat) / Math.max(0.0001, maxLat - minLat);
+    return CANVAS_H - PADDING - ratio * (CANVAS_H - 2 * PADDING);
+  };
+
+  // Generate realistic cadastral parcel polygon shapes scaled to area_acres
+  const getParcelPolygon = (field: FieldInfo, idx: number) => {
+    const cx = projectX(field.center_lon);
+    const cy = projectY(field.center_lat);
+    const scale = Math.sqrt(Math.max(2, field.area_acres)) * 8.5;
+
+    // Agricultural field orientations (aligned with rural survey boundaries)
+    const anglePresets = [18, -12, 8, -20, 15, -8, 25, -15, 10, -5];
+    const angleRad = (anglePresets[idx % anglePresets.length] * Math.PI) / 180;
+    const cosA = Math.cos(angleRad);
+    const sinA = Math.sin(angleRad);
+
+    const w = scale * 1.8;
+    const h = scale * 1.15;
+
+    // Trapezoidal boundary points relative to center
+    const corners = [
+      { dx: -w / 2 - 3, dy: -h / 2 + 2 },
+      { dx: w / 2 + 2, dy: -h / 2 - 2 },
+      { dx: w / 2 - 2, dy: h / 2 + 3 },
+      { dx: -w / 2 + 1, dy: h / 2 - 1 },
     ];
-    return shapes[index % shapes.length];
+
+    const rotatedPoints = corners.map((pt) => {
+      const rx = pt.dx * cosA - pt.dy * sinA;
+      const ry = pt.dx * sinA + pt.dy * cosA;
+      return `${(cx + rx).toFixed(1)},${(cy + ry).toFixed(1)}`;
+    });
+
+    return {
+      points: rotatedPoints.join(" "),
+      cx,
+      cy,
+    };
   };
 
+  // Map machines to assigned target fields for realistic dispatch corridors
+  const machineAssignments = useMemo(() => {
+    return machines.map((m, idx) => {
+      // Pair each machine deterministically with a field needing attention or in-progress
+      const targetField =
+        fields.find((f) => f.state === "burn_detected") ||
+        fields.find((f) => f.state === "harvested_residue_present") ||
+        (fields.length > 0 ? fields[idx % fields.length] : null);
+
+      const typeCode = m.machine_type
+        .split("_")
+        .map((w) => w[0].toUpperCase())
+        .join("");
+      const distCode = (m.district || "SEC").substring(0, 3).toUpperCase();
+      const numCode = m.id.replace(/[^0-9]/g, "").slice(-2) || String(idx + 1).padStart(2, "0");
+      const callsign = `${typeCode}-${distCode}-${numCode}`;
+
+      return {
+        machine: m,
+        callsign,
+        targetField,
+        isInUse: m.status === "in_use",
+        etaMinutes: 8 + (idx * 4) % 15,
+        distanceKm: (1.8 + ((idx * 7) % 25) / 10).toFixed(1),
+      };
+    });
+  }, [machines, fields]);
+
+  // Selected objects
+  const selectedField = useMemo(
+    () => fields.find((f) => f.id === selectedFieldId) || null,
+    [fields, selectedFieldId]
+  );
+
+  const selectedMachine = useMemo(
+    () => machineAssignments.find((a) => a.machine.id === selectedMachineId) || null,
+    [machineAssignments, selectedMachineId]
+  );
+
+  // Incoming machine assigned to selected field
+  const incomingMachineForSelectedField = useMemo(() => {
+    if (!selectedField) return null;
+    return machineAssignments.find(
+      (a) => a.targetField?.id === selectedField.id && a.isInUse
+    );
+  }, [selectedField, machineAssignments]);
+
+  // Filtered fields based on active pill
+  const filteredFields = useMemo(() => {
+    return fields.filter((f) => {
+      if (activeFilter === "burn") return f.state === "burn_detected";
+      if (activeFilter === "residue") return f.state === "harvested_residue_present";
+      if (activeFilter === "cleared") return f.state === "cleared";
+      return true;
+    });
+  }, [fields, activeFilter]);
+
+  // Filter counts
   const burnCount = fields.filter((f) => f.state === "burn_detected").length;
+  const residueCount = fields.filter((f) => f.state === "harvested_residue_present").length;
+  const clearedCount = fields.filter((f) => f.state === "cleared").length;
+  const activeFleetCount = machineAssignments.filter((a) => a.isInUse).length;
+
+  // Zoom & Pan handlers
+  const handleZoomIn = () => setZoom((z) => Math.min(2.5, Number((z + 0.25).toFixed(2))));
+  const handleZoomOut = () => setZoom((z) => Math.max(1, Number((z - 0.25).toFixed(2))));
+  const handleResetView = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (zoom <= 1) return;
+    setIsPanning(true);
+    panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isPanning) return;
+    setPan({
+      x: e.clientX - panStartRef.current.x,
+      y: e.clientY - panStartRef.current.y,
+    });
+  };
+
+  const handleMouseUp = () => setIsPanning(false);
+
+  // Colors & styles by field status
+  const getFieldStyle = (state: string, isSelected: boolean) => {
+    switch (state) {
+      case "burn_detected":
+        return {
+          fill: "fill-red-600/35",
+          stroke: isSelected ? "stroke-red-300" : "stroke-red-500",
+          strokeWidth: isSelected ? 3 : 2,
+          glow: "drop-shadow(0 0 10px rgba(239, 68, 68, 0.7))",
+          labelBg: "bg-red-950/90 text-red-300 border-red-700",
+        };
+      case "harvested_residue_present":
+        return {
+          fill: "fill-amber-500/25",
+          stroke: isSelected ? "stroke-amber-200" : "stroke-amber-400",
+          strokeWidth: isSelected ? 3 : 1.6,
+          glow: isSelected ? "drop-shadow(0 0 8px rgba(245, 158, 11, 0.6))" : undefined,
+          labelBg: "bg-amber-950/90 text-amber-300 border-amber-800",
+        };
+      case "cleared":
+        return {
+          fill: "fill-emerald-500/20",
+          stroke: isSelected ? "stroke-emerald-200" : "stroke-emerald-400",
+          strokeWidth: isSelected ? 3 : 1.4,
+          glow: isSelected ? "drop-shadow(0 0 8px rgba(16, 185, 129, 0.6))" : undefined,
+          labelBg: "bg-emerald-950/90 text-emerald-300 border-emerald-800",
+        };
+      default:
+        return {
+          fill: "fill-slate-700/20",
+          stroke: isSelected ? "stroke-slate-300" : "stroke-slate-500",
+          strokeWidth: isSelected ? 2.5 : 1.2,
+          glow: undefined,
+          labelBg: "bg-slate-900/90 text-slate-400 border-slate-700",
+        };
+    }
+  };
+
+  // Highway corridor anchor points
+  const highwayPoints = useMemo(() => {
+    const p1x = projectX(config.centerLon - 0.05);
+    const p1y = projectY(config.centerLat + 0.035);
+    const p2x = projectX(config.centerLon);
+    const p2y = projectY(config.centerLat);
+    const p3x = projectX(config.centerLon + 0.055);
+    const p3y = projectY(config.centerLat - 0.038);
+    return `M ${p1x} ${p1y} Q ${p2x} ${p2y - 15} ${p3x} ${p3y}`;
+  }, [config, minLon, maxLon, minLat, maxLat]);
+
+  // Canal network path
+  const canalPoints = useMemo(() => {
+    const c1x = projectX(config.centerLon - 0.045);
+    const c1y = projectY(config.centerLat - 0.032);
+    const c2x = projectX(config.centerLon + 0.005);
+    const c2y = projectY(config.centerLat + 0.005);
+    const c3x = projectX(config.centerLon + 0.048);
+    const c3y = projectY(config.centerLat + 0.038);
+    return `M ${c1x} ${c1y} C ${c2x - 30} ${c2y - 20}, ${c2x + 20} ${c2y + 15}, ${c3x} ${c3y}`;
+  }, [config, minLon, maxLon, minLat, maxLat]);
+
+  // CHC Depot position
+  const chcPos = useMemo(() => {
+    return {
+      x: projectX(config.centerLon + 0.002),
+      y: projectY(config.centerLat - 0.004),
+    };
+  }, [config, minLon, maxLon, minLat, maxLat]);
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col h-[520px]">
-      <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
-        <div className="flex items-center gap-2">
-          <Layers className="h-4 w-4 text-emerald-400" />
-          <h2 className="text-sm font-semibold text-white capitalize">{district} Geospatial Field Monitoring & Route Map</h2>
-          {burnCount > 0 ? (
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-950/80 text-red-400 border border-red-800 font-mono font-medium animate-pulse">
-              {burnCount} Thermal Anomalies
-            </span>
-          ) : (
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800 font-mono font-medium">
-              Zero Fires
-            </span>
-          )}
+    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col h-[560px] shadow-2xl relative select-none">
+      {/* Top Header Bar */}
+      <div className="px-4 py-2.5 border-b border-slate-800 bg-slate-900/90 flex flex-wrap items-center justify-between gap-3 backdrop-blur z-20">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-lg bg-emerald-950/80 border border-emerald-700/60 text-emerald-400">
+            <Layers className="h-4 w-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-white tracking-wide">
+                {config.name} GIS Cadastre & Route Command Center
+              </h2>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                {config.state}
+              </span>
+              {burnCount > 0 ? (
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-red-950 text-red-400 border border-red-800/90 font-mono font-semibold flex items-center gap-1 animate-pulse">
+                  <Flame className="h-3 w-3 text-red-400" />
+                  {burnCount} FIRMS Thermal {burnCount === 1 ? "Hotspot" : "Hotspots"}
+                </span>
+              ) : (
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800/90 font-mono font-medium flex items-center gap-1">
+                  <Zap className="h-3 w-3 text-emerald-400" />
+                  Zero Active Fires
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Sentinel-2 L2A Multispectral Cadastre (10m) · CP-SAT Dynamic Fleet Router
+            </p>
+          </div>
         </div>
 
-        {/* Legend */}
-        <div className="flex items-center gap-4 text-xs">
-          <div className="flex items-center gap-1.5 text-slate-300">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 inline-block"></span>
-            <span>Cleared</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-slate-300">
-            <span className="h-2.5 w-2.5 rounded-full bg-amber-400 inline-block"></span>
-            <span>Residue Present</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-slate-300">
-            <span className="h-2.5 w-2.5 rounded-full bg-red-500 inline-block animate-ping"></span>
-            <span className="text-red-400 font-medium">Burn Detected</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-slate-300">
-            <Tractor className="h-3.5 w-3.5 text-cyan-400 inline" />
-            <span>Active Machine</span>
-          </div>
+        {/* Filter Pills */}
+        <div className="flex items-center gap-1.5 text-xs bg-slate-950/80 p-1 rounded-lg border border-slate-800">
+          <button
+            onClick={() => setActiveFilter("all")}
+            className={`px-2.5 py-1 rounded font-medium transition ${
+              activeFilter === "all"
+                ? "bg-slate-800 text-white shadow-sm"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            All Parcels ({fields.length})
+          </button>
+          <button
+            onClick={() => setActiveFilter("burn")}
+            className={`px-2.5 py-1 rounded font-medium transition flex items-center gap-1 ${
+              activeFilter === "burn"
+                ? "bg-red-950 text-red-300 border border-red-800"
+                : "text-slate-400 hover:text-red-400"
+            }`}
+          >
+            <Flame className="h-3 w-3 text-red-400" /> Fires ({burnCount})
+          </button>
+          <button
+            onClick={() => setActiveFilter("residue")}
+            className={`px-2.5 py-1 rounded font-medium transition flex items-center gap-1 ${
+              activeFilter === "residue"
+                ? "bg-amber-950 text-amber-300 border border-amber-800"
+                : "text-slate-400 hover:text-amber-300"
+            }`}
+          >
+            <Wheat className="h-3 w-3 text-amber-400" /> Residue ({residueCount})
+          </button>
+          <button
+            onClick={() => setActiveFilter("cleared")}
+            className={`px-2.5 py-1 rounded font-medium transition flex items-center gap-1 ${
+              activeFilter === "cleared"
+                ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                : "text-slate-400 hover:text-emerald-300"
+            }`}
+          >
+            Cleared ({clearedCount})
+          </button>
+        </div>
+
+        {/* Layer Visibility Toggles */}
+        <div className="flex items-center gap-2 text-[11px]">
+          <button
+            onClick={() => setShowRoads((v) => !v)}
+            title="Toggle Rural Road Network"
+            className={`px-2 py-1 rounded border font-medium transition flex items-center gap-1 ${
+              showRoads
+                ? "bg-cyan-950/80 border-cyan-700/80 text-cyan-300"
+                : "bg-slate-900 border-slate-800 text-slate-500"
+            }`}
+          >
+            <span>🛣️ Roads</span>
+          </button>
+          <button
+            onClick={() => setShowRoutes((v) => !v)}
+            title="Toggle Fleet Dispatch Corridors"
+            className={`px-2 py-1 rounded border font-medium transition flex items-center gap-1 ${
+              showRoutes
+                ? "bg-cyan-950/80 border-cyan-700/80 text-cyan-300"
+                : "bg-slate-900 border-slate-800 text-slate-500"
+            }`}
+          >
+            <span>🚜 Routes ({activeFleetCount})</span>
+          </button>
+          <button
+            onClick={() => setShowThermal((v) => !v)}
+            title="Toggle Thermal Anomaly Overlay"
+            className={`px-2 py-1 rounded border font-medium transition flex items-center gap-1 ${
+              showThermal
+                ? "bg-red-950/80 border-red-700/80 text-red-300"
+                : "bg-slate-900 border-slate-800 text-slate-500"
+            }`}
+          >
+            <span>🔥 Thermal</span>
+          </button>
+          <button
+            onClick={() => setShowGrid((v) => !v)}
+            title="Toggle Coordinate Grid"
+            className={`px-2 py-1 rounded border font-medium transition flex items-center gap-1 ${
+              showGrid
+                ? "bg-slate-800 border-slate-700 text-slate-200"
+                : "bg-slate-900 border-slate-800 text-slate-500"
+            }`}
+          >
+            <span>🛰️ Grid</span>
+          </button>
         </div>
       </div>
 
-      <div className="relative flex-1 bg-slate-950 p-4 overflow-hidden">
-        {/* Synthetic Vector / SVG Map Canvas */}
-        <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-          {/* Subtle grid lines */}
+      {/* Main Map Viewport */}
+      <div
+        className="relative flex-1 bg-slate-950 overflow-hidden cursor-grab active:cursor-grabbing"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+      >
+        <svg
+          className="w-full h-full"
+          viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`}
+          preserveAspectRatio="xMidYMid meet"
+        >
           <defs>
-            <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-              <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#1e293b" strokeWidth="0.5" />
+            {/* Dark GIS Satellite Grid Pattern */}
+            <pattern id="gisGrid" width="48" height="48" patternUnits="userSpaceOnUse">
+              <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#1e293b" strokeWidth="0.75" />
+              <circle cx="24" cy="24" r="0.8" fill="#334155" />
             </pattern>
+
+            {/* Farm Residue Stubble Hatch Pattern */}
+            <pattern id="stubblePattern" width="10" height="10" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="10" x2="10" y2="0" stroke="#f59e0b" strokeWidth="0.8" opacity="0.3" />
+            </pattern>
+
+            {/* Cleared / Wheat Seeding Furrow Pattern */}
+            <pattern id="clearedPattern" width="8" height="8" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="4" x2="8" y2="4" stroke="#10b981" strokeWidth="0.7" opacity="0.25" />
+            </pattern>
+
+            {/* Thermal Hazard Glow Filter */}
+            <filter id="fireGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="6" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+
+            {/* Route Outer Corridor Glow */}
+            <filter id="routeGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3.5" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
           </defs>
-          <rect width="100" height="100" fill="url(#grid)" />
 
-          {/* Machine dispatch route traces connecting directly to target fields */}
-          {machines.map((m, idx) => {
-            const mx = toX(m.current_lon);
-            const my = toY(m.current_lat);
-            const targetField = fields.length > 0 ? fields[idx % fields.length] : null;
-            if (!targetField) return null;
-            const fx = toX(targetField.center_lon);
-            const fy = toY(targetField.center_lat);
-            const cpx = (mx + fx) / 2 + ((idx % 2 === 0 ? 1 : -1) * 8);
-            const cpy = (my + fy) / 2 - 8;
+          {/* Transform group for Zoom & Pan */}
+          <g
+            transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}
+            transform-origin={`${CANVAS_W / 2} ${CANVAS_H / 2}`}
+          >
+            {/* Background Satellite Canvas Base */}
+            <rect width={CANVAS_W} height={CANVAS_H} fill="#030712" />
+            {showGrid && <rect width={CANVAS_W} height={CANVAS_H} fill="url(#gisGrid)" opacity="0.9" />}
 
-            return (
-              <g key={`route-${m.id}`}>
-                <path
-                  d={`M ${mx} ${my} Q ${cpx} ${cpy} ${fx} ${fy}`}
-                  fill="none"
-                  stroke={m.status === "in_use" ? "#06b6d4" : "#475569"}
-                  strokeWidth={m.status === "in_use" ? "0.8" : "0.5"}
-                  strokeDasharray={m.status === "in_use" ? "2,1.5" : "1,2"}
-                  opacity={m.status === "in_use" ? 0.75 : 0.3}
+            {/* Rural Geographic Coordinate Axis Markings */}
+            {showGrid && (
+              <g className="text-[10px] font-mono fill-slate-500 select-none pointer-events-none">
+                {/* Latitudes on Left */}
+                <text x="16" y={projectY(config.centerLat + 0.025)}>
+                  {(config.centerLat + 0.025).toFixed(3)}°N
+                </text>
+                <line
+                  x1="12"
+                  y1={projectY(config.centerLat + 0.025)}
+                  x2={CANVAS_W - 12}
+                  y2={projectY(config.centerLat + 0.025)}
+                  stroke="#1e293b"
+                  strokeDasharray="2 4"
                 />
-              </g>
-            );
-          })}
 
-          {/* Field Parcels */}
-          {fields.map((f, i) => {
-            const cx = toX(f.center_lon);
-            const cy = toY(f.center_lat);
-            const style = stateColors[f.state] || stateColors.not_harvested;
-            const isFire = f.state === "burn_detected";
-            const polygonPoints = getPolygonPoints(cx, cy, i);
-
-            return (
-              <g
-                key={f.id}
-                onClick={() => setSelectedField(f)}
-                className="cursor-pointer transition-transform hover:scale-105"
-              >
-                <polygon
-                  points={polygonPoints}
-                  className={`${style.bg} ${style.border}`}
-                  strokeWidth={isFire ? "1" : "0.5"}
+                <text x="16" y={projectY(config.centerLat)}>
+                  {config.centerLat.toFixed(3)}°N [District Center]
+                </text>
+                <line
+                  x1="12"
+                  y1={projectY(config.centerLat)}
+                  x2={CANVAS_W - 12}
+                  y2={projectY(config.centerLat)}
+                  stroke="#334155"
+                  strokeDasharray="3 3"
                 />
-                {isFire && (
-                  <circle cx={cx} cy={cy} r="3.5" fill="#ef4444" opacity="0.3" className="animate-ping" />
-                )}
-              </g>
-            );
-          })}
 
-          {/* Machinery Markers */}
-          {machines.map((m) => {
-            const mx = toX(m.current_lon);
-            const my = toY(m.current_lat);
-            const isInUse = m.status === "in_use";
-            const typeCode = m.machine_type === "super_seeder" ? "SS" : m.machine_type === "baler" ? "BL" : "HS";
+                <text x="16" y={projectY(config.centerLat - 0.025)}>
+                  {(config.centerLat - 0.025).toFixed(3)}°N
+                </text>
+                <line
+                  x1="12"
+                  y1={projectY(config.centerLat - 0.025)}
+                  x2={CANVAS_W - 12}
+                  y2={projectY(config.centerLat - 0.025)}
+                  stroke="#1e293b"
+                  strokeDasharray="2 4"
+                />
 
-            return (
-              <g key={m.id} transform={`translate(${mx}, ${my})`} className="cursor-pointer">
-                {isInUse && (
-                  <circle r="3.5" fill="#06b6d4" opacity="0.25" className="animate-ping" />
-                )}
-                <circle r="2.2" fill={isInUse ? "#0891b2" : "#059669"} stroke="#ffffff" strokeWidth="0.5" />
-                <text
-                  y="0.8"
-                  textAnchor="middle"
-                  fontSize="1.6"
-                  fontWeight="bold"
-                  fill="#ffffff"
-                  className="select-none pointer-events-none"
-                >
-                  {typeCode}
+                {/* Longitudes on Bottom */}
+                <text x={projectX(config.centerLon - 0.03)} y={CANVAS_H - 18} textAnchor="middle">
+                  {(config.centerLon - 0.03).toFixed(3)}°E
+                </text>
+                <text x={projectX(config.centerLon)} y={CANVAS_H - 18} textAnchor="middle">
+                  {config.centerLon.toFixed(3)}°E
+                </text>
+                <text x={projectX(config.centerLon + 0.03)} y={CANVAS_H - 18} textAnchor="middle">
+                  {(config.centerLon + 0.03).toFixed(3)}°E
                 </text>
               </g>
-            );
-          })}
+            )}
+
+            {/* Canal Network Layer */}
+            {showRoads && (
+              <g className="select-none">
+                {/* Canal Water Glow & Core */}
+                <path
+                  d={canalPoints}
+                  fill="none"
+                  stroke="#0284c7"
+                  strokeWidth="8"
+                  opacity="0.18"
+                  strokeLinecap="round"
+                />
+                <path
+                  d={canalPoints}
+                  fill="none"
+                  stroke="#38bdf8"
+                  strokeWidth="2.4"
+                  opacity="0.75"
+                  strokeDasharray="12 4"
+                />
+                {/* Canal Label */}
+                <text
+                  x={projectX(config.centerLon + 0.015)}
+                  y={projectY(config.centerLat + 0.012)}
+                  fontSize="9.5"
+                  fontFamily="monospace"
+                  fill="#7dd3fc"
+                  opacity="0.85"
+                >
+                  💧 {config.canalName}
+                </text>
+              </g>
+            )}
+
+            {/* Rural Arterial Highway Corridor */}
+            {showRoads && (
+              <g className="select-none">
+                {/* Highway Bed */}
+                <path
+                  d={highwayPoints}
+                  fill="none"
+                  stroke="#334155"
+                  strokeWidth="7"
+                  strokeLinecap="round"
+                />
+                {/* Highway Centerline */}
+                <path
+                  d={highwayPoints}
+                  fill="none"
+                  stroke="#fbbf24"
+                  strokeWidth="1.2"
+                  strokeDasharray="6 6"
+                  opacity="0.8"
+                />
+                {/* Highway Label */}
+                <text
+                  x={projectX(config.centerLon - 0.032)}
+                  y={projectY(config.centerLat + 0.02)}
+                  fontSize="9.5"
+                  fontFamily="monospace"
+                  fill="#cbd5e1"
+                  opacity="0.9"
+                  className="font-medium"
+                >
+                  🛣️ {config.corridorName}
+                </text>
+
+                {/* Rural Connector Roads joining village clusters */}
+                {config.villages.map((v, i) => {
+                  const vx = projectX(config.centerLon + v.dlon);
+                  const vy = projectY(config.centerLat + v.dlat);
+                  const hwX = projectX(config.centerLon);
+                  const hwY = projectY(config.centerLat);
+
+                  return (
+                    <g key={`road-${v.name}`}>
+                      <path
+                        d={`M ${chcPos.x} ${chcPos.y} Q ${(chcPos.x + vx) / 2} ${(chcPos.y + vy) / 2 - 10} ${vx} ${vy}`}
+                        fill="none"
+                        stroke="#1e293b"
+                        strokeWidth="2.5"
+                        strokeDasharray="4 3"
+                        opacity="0.8"
+                      />
+                      {/* Village settlement label */}
+                      <circle cx={vx} cy={vy} r="3" fill="#64748b" />
+                      <text
+                        x={vx + 6}
+                        y={vy - 4}
+                        fontSize="9"
+                        fontFamily="sans-serif"
+                        fill="#94a3b8"
+                        className="font-semibold"
+                      >
+                        📍 {v.name}
+                      </text>
+                    </g>
+                  );
+                })}
+              </g>
+            )}
+
+            {/* Custom Hiring Center (CHC Central Machinery Depot) */}
+            <g
+              transform={`translate(${chcPos.x}, ${chcPos.y})`}
+              className="cursor-pointer"
+              onClick={() => setSelectedMachineId(machines[0]?.id || null)}
+            >
+              <rect
+                x="-46"
+                y="-14"
+                width="92"
+                height="28"
+                rx="6"
+                fill="#0f172a"
+                stroke="#0284c7"
+                strokeWidth="1.5"
+                opacity="0.95"
+              />
+              <circle cx="-32" cy="0" r="4.5" fill="#38bdf8" />
+              <text
+                x="4"
+                y="3.5"
+                textAnchor="middle"
+                fontSize="8.5"
+                fontFamily="sans-serif"
+                fill="#e2e8f0"
+                className="font-bold select-none"
+              >
+                🏢 CHC DEPOT
+              </text>
+            </g>
+
+            {/* Machine Dispatch Route Corridors */}
+            {showRoutes &&
+              machineAssignments.map((a, idx) => {
+                const mx = projectX(a.machine.current_lon);
+                const my = projectY(a.machine.current_lat);
+
+                if (!a.targetField) return null;
+                const fx = projectX(a.targetField.center_lon);
+                const fy = projectY(a.targetField.center_lat);
+
+                const isSelected =
+                  selectedMachineId === a.machine.id || selectedFieldId === a.targetField.id;
+                const isDimmed =
+                  (selectedMachineId || selectedFieldId) && !isSelected;
+
+                if (!a.isInUse && !isSelected) return null;
+
+                // Waypoint corridor via nearest rural link route
+                const midX = (mx + fx) / 2 + ((idx % 2 === 0 ? 1 : -1) * 22);
+                const midY = (my + fy) / 2 - 16;
+                const routePath = `M ${mx} ${my} Q ${midX} ${midY} ${fx} ${fy}`;
+
+                return (
+                  <g
+                    key={`route-${a.machine.id}`}
+                    opacity={isDimmed ? 0.25 : 1}
+                    className="transition-opacity duration-300"
+                  >
+                    {/* Outer Ambient Glow */}
+                    <path
+                      d={routePath}
+                      fill="none"
+                      stroke="#06b6d4"
+                      strokeWidth={isSelected ? "8" : "5"}
+                      opacity={isSelected ? "0.45" : "0.2"}
+                      strokeLinecap="round"
+                      filter="url(#routeGlow)"
+                    />
+
+                    {/* Base Route Track */}
+                    <path
+                      d={routePath}
+                      fill="none"
+                      stroke="#0891b2"
+                      strokeWidth={isSelected ? "2.6" : "1.8"}
+                      strokeDasharray="4 3"
+                      opacity="0.8"
+                    />
+
+                    {/* Directional Flow Animation Track */}
+                    <path
+                      d={routePath}
+                      fill="none"
+                      stroke={isSelected ? "#ffffff" : "#22d3ee"}
+                      strokeWidth={isSelected ? "2.4" : "1.8"}
+                      strokeDasharray="7 5"
+                      className="animate-route-flow"
+                    />
+
+                    {/* Destination Entry Waypoint Pin */}
+                    <circle cx={fx} cy={fy} r="5" fill="#06b6d4" opacity="0.4" />
+                    <circle cx={fx} cy={fy} r="2.5" fill="#22d3ee" />
+
+                    {/* Interactive Telemetry Route Badge along midpoint */}
+                    <g
+                      transform={`translate(${midX}, ${midY})`}
+                      className="cursor-pointer"
+                      onClick={() => {
+                        setSelectedMachineId(a.machine.id);
+                        setSelectedFieldId(a.targetField!.id);
+                      }}
+                    >
+                      <rect
+                        x="-48"
+                        y="-10"
+                        width="96"
+                        height="20"
+                        rx="10"
+                        fill="#082f49"
+                        stroke="#38bdf8"
+                        strokeWidth="1.2"
+                      />
+                      <text
+                        x="0"
+                        y="3.5"
+                        textAnchor="middle"
+                        fontSize="8.5"
+                        fontFamily="monospace"
+                        fontWeight="bold"
+                        fill="#e0f2fe"
+                        className="select-none pointer-events-none"
+                      >
+                        {a.distanceKm} km · {a.etaMinutes}m ETA
+                      </text>
+                    </g>
+                  </g>
+                );
+              })}
+
+            {/* Field Parcels (Authentic Cadastre Boundary Geometry) */}
+            {filteredFields.map((field, idx) => {
+              const { points, cx, cy } = getParcelPolygon(field, idx);
+              const isSelected = selectedFieldId === field.id;
+              const isFire = field.state === "burn_detected";
+              const isResidue = field.state === "harvested_residue_present";
+              const isCleared = field.state === "cleared";
+              const isFastDispatched = Boolean(fastDispatchedIds[field.id]);
+              const style = getFieldStyle(field.state, isSelected);
+
+              return (
+                <g
+                  key={field.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedFieldId(field.id);
+                    // Also highlight assigned machine if present
+                    const assigned = machineAssignments.find(
+                      (m) => m.targetField?.id === field.id
+                    );
+                    if (assigned) setSelectedMachineId(assigned.machine.id);
+                  }}
+                  className="cursor-pointer transition-all duration-200"
+                >
+                  {/* Active Thermal Wave Beacon (FIRMS Anomaly Alert) */}
+                  {showThermal && isFire && (
+                    <g>
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r="30"
+                        fill="none"
+                        stroke="#ef4444"
+                        strokeWidth="1.5"
+                        className="animate-radar-ring"
+                      />
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r="20"
+                        fill="none"
+                        stroke="#f97316"
+                        strokeWidth="1.8"
+                        className="animate-radar-ring"
+                        style={{ animationDelay: "0.6s" }}
+                      />
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r="14"
+                        fill="#ef4444"
+                        opacity="0.35"
+                        filter="url(#fireGlow)"
+                      />
+                    </g>
+                  )}
+
+                  {/* Parcel Cadastre Boundary Polygon */}
+                  <polygon
+                    points={points}
+                    className={`${style.fill} ${style.stroke} transition-all`}
+                    strokeWidth={style.strokeWidth}
+                    style={{ filter: style.glow }}
+                  />
+
+                  {/* Internal Crop Residue / Cleared Pattern Overlay */}
+                  {isResidue && (
+                    <polygon
+                      points={points}
+                      fill="url(#stubblePattern)"
+                      className="pointer-events-none"
+                    />
+                  )}
+                  {isCleared && (
+                    <polygon
+                      points={points}
+                      fill="url(#clearedPattern)"
+                      className="pointer-events-none"
+                    />
+                  )}
+
+                  {/* Selected Highlight Outline */}
+                  {isSelected && (
+                    <polygon
+                      points={points}
+                      fill="none"
+                      stroke="#38bdf8"
+                      strokeWidth="2.5"
+                      strokeDasharray="4 2"
+                      className="pointer-events-none"
+                    />
+                  )}
+
+                  {/* Parcel Callsign Badge */}
+                  <g transform={`translate(${cx}, ${cy})`} className="pointer-events-none">
+                    <rect
+                      x="-25"
+                      y="-8"
+                      width="50"
+                      height="16"
+                      rx="4"
+                      className={`${style.labelBg} border transition-colors`}
+                    />
+                    <text
+                      y="3.5"
+                      textAnchor="middle"
+                      fontSize="8"
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                      fill="#ffffff"
+                      className="select-none"
+                    >
+                      {field.village_code.split("-").slice(-2).join("-")}
+                    </text>
+                  </g>
+
+                  {/* Acreage Pill Tag */}
+                  <g transform={`translate(${cx}, ${cy + 13})`} className="pointer-events-none">
+                    <text
+                      y="0"
+                      textAnchor="middle"
+                      fontSize="7.5"
+                      fontFamily="sans-serif"
+                      fill="#94a3b8"
+                      className="font-medium select-none"
+                    >
+                      {field.area_acres} ac {isFire ? "🔥" : isFastDispatched ? "⚡" : ""}
+                    </text>
+                  </g>
+                </g>
+              );
+            })}
+
+            {/* Machinery Fleet Markers */}
+            {machineAssignments.map((a) => {
+              const mx = projectX(a.machine.current_lon);
+              const my = projectY(a.machine.current_lat);
+              const isSelected = selectedMachineId === a.machine.id;
+              const isInUse = a.isInUse;
+
+              return (
+                <g
+                  key={`marker-${a.machine.id}`}
+                  transform={`translate(${mx}, ${my})`}
+                  className="cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedMachineId(a.machine.id);
+                    if (a.targetField) setSelectedFieldId(a.targetField.id);
+                  }}
+                >
+                  {/* Active Radar Pulse Ring for In-Use Machines */}
+                  {isInUse && (
+                    <circle
+                      r="18"
+                      fill="none"
+                      stroke="#06b6d4"
+                      strokeWidth="1.5"
+                      className="animate-radar-ring"
+                    />
+                  )}
+
+                  {/* Outer Contrast Rim */}
+                  <circle
+                    r={isSelected ? 14 : 11}
+                    fill="#020617"
+                    stroke={isSelected ? "#38bdf8" : isInUse ? "#0891b2" : "#059669"}
+                    strokeWidth={isSelected ? 2.5 : 1.8}
+                  />
+
+                  {/* Core Status Indicator */}
+                  <circle
+                    r={isSelected ? 9 : 7}
+                    fill={isInUse ? "#06b6d4" : "#10b981"}
+                  />
+
+                  {/* Tractor Icon Silhouette Center */}
+                  <text
+                    y="2.5"
+                    textAnchor="middle"
+                    fontSize={isSelected ? "9" : "7.5"}
+                    fill="#ffffff"
+                    fontWeight="bold"
+                    className="select-none pointer-events-none"
+                  >
+                    🚜
+                  </text>
+
+                  {/* Machine Callsign Tag */}
+                  <g transform="translate(0, -17)" className="pointer-events-none">
+                    <rect
+                      x="-26"
+                      y="-7"
+                      width="52"
+                      height="14"
+                      rx="3"
+                      fill="#0f172a"
+                      stroke={isSelected ? "#38bdf8" : "#334155"}
+                      strokeWidth="1"
+                    />
+                    <text
+                      y="3.5"
+                      textAnchor="middle"
+                      fontSize="7.5"
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                      fill={isInUse ? "#67e8f9" : "#a7f3d0"}
+                      className="select-none"
+                    >
+                      {a.callsign}
+                    </text>
+                  </g>
+                </g>
+              );
+            })}
+          </g>
         </svg>
 
-        {/* Selected Field Modal / Overlay */}
+        {/* Floating Zoom & GIS Controls */}
+        <div className="absolute top-4 right-4 flex flex-col gap-1.5 bg-slate-900/95 border border-slate-700/80 rounded-lg p-1.5 shadow-xl backdrop-blur z-20">
+          <button
+            onClick={handleZoomIn}
+            title="Zoom In"
+            className="w-7 h-7 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center font-bold text-sm transition"
+          >
+            +
+          </button>
+          <button
+            onClick={handleZoomOut}
+            title="Zoom Out"
+            className="w-7 h-7 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center font-bold text-sm transition"
+          >
+            −
+          </button>
+          <button
+            onClick={handleResetView}
+            title="Reset View"
+            className="w-7 h-7 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center text-xs transition"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+          </button>
+          <div className="border-t border-slate-700 pt-1 mt-0.5 text-center font-mono text-[9px] text-slate-400">
+            {Math.round(zoom * 100)}%
+          </div>
+        </div>
+
+        {/* Legend Overlay at Bottom Right */}
+        <div className="absolute bottom-3 right-4 bg-slate-900/90 border border-slate-800 rounded-lg px-3 py-2 text-[11px] shadow-lg backdrop-blur flex items-center gap-4 text-slate-300 z-10">
+          <div className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500/80 border border-emerald-400 inline-block"></span>
+            <span>Cleared (In-Situ)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-sm bg-amber-500/80 border border-amber-400 inline-block"></span>
+            <span>Residue Present</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-sm bg-red-600 border border-red-400 inline-block animate-ping"></span>
+            <span className="text-red-400 font-semibold">FIRMS Fire Alert</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-cyan-500 border border-white inline-block"></span>
+            <span>Active Machine</span>
+          </div>
+        </div>
+
+        {/* Interactive Parcel Inspector HUD Drawer (Bottom Left) */}
         {selectedField && (
-          <div className="absolute bottom-4 left-4 bg-slate-900/95 border border-slate-700 rounded-lg p-3 w-72 text-xs shadow-xl backdrop-blur z-20">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <span className="font-semibold text-white">Parcel {selectedField.village_code}</span>
+          <div className="absolute bottom-3 left-4 bg-slate-900/95 border border-slate-700 rounded-xl p-4 w-80 text-xs shadow-2xl backdrop-blur z-30 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-cyan-400" />
+                <span className="font-bold text-white text-sm">Parcel {selectedField.village_code}</span>
+              </div>
               <button
-                onClick={() => setSelectedField(null)}
-                className="text-slate-400 hover:text-white"
+                onClick={() => setSelectedFieldId(null)}
+                className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="mt-2 space-y-1.5 text-slate-300">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Acreage:</span>
-                <span className="font-medium text-white">{selectedField.area_acres} acres</span>
+
+            <div className="mt-3 space-y-2 text-slate-300">
+              <div className="grid grid-cols-2 gap-2 bg-slate-950/60 p-2 rounded-lg border border-slate-800/80">
+                <div>
+                  <span className="text-[10px] text-slate-500 block uppercase font-medium">Cadastre Acreage</span>
+                  <span className="font-bold text-white text-xs">{selectedField.area_acres} acres</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 block uppercase font-medium">Estimated Straw</span>
+                  <span className="font-bold text-amber-300 text-xs">
+                    {(selectedField.area_acres * 2.4).toFixed(1)} t dry stubble
+                  </span>
+                </div>
               </div>
+
+              <div className="flex justify-between items-center py-1 border-b border-slate-800/60">
+                <span className="text-slate-400">Harvest Status:</span>
+                <span
+                  className={`font-semibold px-2 py-0.5 rounded text-[10px] uppercase ${
+                    selectedField.state === "cleared"
+                      ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                      : selectedField.state === "burn_detected"
+                      ? "bg-red-950 text-red-300 border border-red-800 animate-pulse font-bold"
+                      : "bg-amber-950 text-amber-300 border border-amber-800"
+                  }`}
+                >
+                  {selectedField.state.replace(/_/g, " ")}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1 border-b border-slate-800/60">
+                <span className="text-slate-400">Burn Risk Index:</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-16 h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${
+                        selectedField.burn_risk_score > 0.7
+                          ? "bg-red-500"
+                          : selectedField.burn_risk_score > 0.3
+                          ? "bg-amber-400"
+                          : "bg-emerald-500"
+                      }`}
+                      style={{ width: `${Math.round(selectedField.burn_risk_score * 100)}%` }}
+                    />
+                  </div>
+                  <span className="font-mono font-bold text-white">
+                    {Math.round(selectedField.burn_risk_score * 100)}%
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center py-1 border-b border-slate-800/60">
+                <span className="text-slate-400">Satellite Sensor:</span>
+                <span className="font-mono text-emerald-400">
+                  Sentinel-2 L2A ({Math.round(selectedField.state_confidence * 100)}%)
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1 border-b border-slate-800/60">
+                <span className="text-slate-400">Farmgate GPS:</span>
+                <span className="font-mono text-[11px] text-slate-300">
+                  {selectedField.center_lat.toFixed(4)}°N, {selectedField.center_lon.toFixed(4)}°E
+                </span>
+              </div>
+
+              {/* Machinery Dispatch Status or 1-Click Fast Dispatch */}
+              <div className="pt-2">
+                {incomingMachineForSelectedField ? (
+                  <div className="bg-cyan-950/60 border border-cyan-800/80 rounded-lg p-2.5 space-y-1">
+                    <div className="flex items-center justify-between text-cyan-300 font-semibold text-[11px]">
+                      <span className="flex items-center gap-1">
+                        <Tractor className="h-3.5 w-3.5" />
+                        Dispatched: {incomingMachineForSelectedField.callsign}
+                      </span>
+                      <span className="text-cyan-400 font-mono text-[10px]">
+                        {incomingMachineForSelectedField.etaMinutes} mins away
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-300 flex justify-between">
+                      <span>Operator: {incomingMachineForSelectedField.machine.operator_name}</span>
+                      <span>{incomingMachineForSelectedField.distanceKm} km route</span>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setFastDispatchedIds((prev) => ({ ...prev, [selectedField.id]: true }));
+                    }}
+                    className={`w-full py-2 rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 transition ${
+                      fastDispatchedIds[selectedField.id]
+                        ? "bg-emerald-600 text-white"
+                        : "bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-600/30"
+                    }`}
+                  >
+                    <Zap className="h-3.5 w-3.5" />
+                    {fastDispatchedIds[selectedField.id]
+                      ? "Dispatched: Priority Seeder En Route"
+                      : "1-Click Fast Dispatch Nearest Baler"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Selected Machine Telemetry HUD Overlay (Top Left) */}
+        {selectedMachine && !selectedField && (
+          <div className="absolute top-4 left-4 bg-slate-900/95 border border-slate-700 rounded-xl p-3.5 w-76 text-xs shadow-2xl backdrop-blur z-30 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Tractor className="h-4 w-4 text-cyan-400" />
+                <span className="font-bold text-white">{selectedMachine.callsign}</span>
+              </div>
+              <button
+                onClick={() => setSelectedMachineId(null)}
+                className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="mt-2.5 space-y-1.5 text-slate-300">
               <div className="flex justify-between">
-                <span className="text-slate-500">Status:</span>
-                <span className={`font-medium ${selectedField.state === "cleared" ? "text-emerald-400" : selectedField.state === "burn_detected" ? "text-red-400 font-bold" : "text-amber-400"}`}>
-                  {selectedField.state.replace(/_/g, " ").toUpperCase()}
+                <span className="text-slate-400">Machine Type:</span>
+                <span className="font-semibold text-white capitalize">
+                  {selectedMachine.machine.machine_type.replace(/_/g, " ")}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Burn Risk Score:</span>
-                <span className="font-mono">{Math.round(selectedField.burn_risk_score * 100)}%</span>
+                <span className="text-slate-400">Operator:</span>
+                <span className="font-medium text-cyan-300">
+                  {selectedMachine.machine.operator_name || "Unassigned"}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Satellite Confidence:</span>
-                <span className="font-mono text-emerald-400">{Math.round(selectedField.state_confidence * 100)}%</span>
+                <span className="text-slate-400">Daily Throughput:</span>
+                <span className="font-mono text-white">
+                  {selectedMachine.machine.capacity_acres_per_day} ac/day
+                </span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Status:</span>
+                <span
+                  className={`font-semibold uppercase text-[10px] px-1.5 py-0.5 rounded ${
+                    selectedMachine.isInUse
+                      ? "bg-amber-950 text-amber-300 border border-amber-800"
+                      : "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                  }`}
+                >
+                  {selectedMachine.machine.status.replace(/_/g, " ")}
+                </span>
+              </div>
+              {selectedMachine.targetField && (
+                <div className="mt-2 pt-2 border-t border-slate-800 bg-slate-950/50 p-2 rounded text-[11px]">
+                  <span className="text-slate-400 block text-[10px] uppercase font-medium">
+                    Assigned Destination:
+                  </span>
+                  <div className="flex justify-between items-center text-white font-semibold">
+                    <span>Parcel {selectedMachine.targetField.village_code}</span>
+                    <span className="text-cyan-400 font-mono text-[10px]">
+                      {selectedMachine.etaMinutes}m ETA
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -33,6 +33,27 @@ export async function fetchDistrictSummary(district: string = "sangrur"): Promis
   };
 }
 
+const FIELD_OFFSETS: [number, number][] = [
+  [-0.024, -0.019],
+  [0.016, -0.026],
+  [-0.032, 0.014],
+  [0.009, 0.027],
+  [0.031, -0.006],
+  [-0.011, 0.036],
+  [0.035, 0.021],
+  [-0.027, 0.004],
+  [0.019, -0.031],
+  [-0.004, -0.012],
+];
+
+const DISTRICT_BURN_INDICES: Record<string, number[]> = {
+  sangrur: [5],
+  patiala: [4, 9],
+  ludhiana: [3, 8],
+  fatehgarh: [6],
+  karnal: [2, 7],
+};
+
 export async function fetchFields(district: string = "sangrur"): Promise<FieldInfo[]> {
   const dKey = district.toLowerCase();
   try {
@@ -44,23 +65,37 @@ export async function fetchFields(district: string = "sangrur"): Promise<FieldIn
   } catch (e) {}
 
   const geo = DISTRICT_GEO[dKey] || DISTRICT_GEO.sangrur;
-  return Array.from({ length: 12 }, (_, i) => {
-    const isBurn = i === 4 || (i === 8 && (dKey === "ludhiana" || dKey === "patiala"));
-    const isCleared = i < 5 && !isBurn;
+  const burnSet = new Set(DISTRICT_BURN_INDICES[dKey] || [5]);
+
+  return Array.from({ length: 10 }, (_, idx) => {
+    const i = idx + 1;
+    const isBurn = burnSet.has(i);
+    const isCleared = i <= 4 && !isBurn;
+    const [dlat, dlon] = FIELD_OFFSETS[(i - 1) % FIELD_OFFSETS.length];
+
     return {
-      id: `field-${dKey}-${i + 1}`,
+      id: `field-${dKey}-${i}`,
       farmer_id: `farmer-${dKey}-${(i % 5) + 1}`,
       district: dKey,
-      village_code: `${geo.code}-00${i + 1}`,
-      area_acres: 2.5 + (i % 4),
+      village_code: `${geo.code}-00${i}`,
+      area_acres: 2.5 + (i % 5),
       state: isBurn ? "burn_detected" : isCleared ? "cleared" : "harvested_residue_present",
-      state_confidence: 0.94,
-      burn_risk_score: isBurn ? 0.96 : isCleared ? 0.05 : 0.78,
-      center_lat: geo.lat + ((i % 4) * 0.02) - 0.03,
-      center_lon: geo.lon + (Math.floor(i / 4) * 0.02) - 0.02,
+      state_confidence: isBurn ? 0.94 : 0.91,
+      burn_risk_score: isBurn ? 0.96 : isCleared ? 0.08 : 0.82,
+      center_lat: Number((geo.lat + dlat).toFixed(4)),
+      center_lon: Number((geo.lon + dlon).toFixed(4)),
     };
   });
 }
+
+const MACHINE_OFFSETS: [number, number][] = [
+  [-0.015, -0.012],
+  [0.018, 0.015],
+  [-0.022, 0.024],
+  [0.025, -0.018],
+  [-0.008, 0.012],
+  [0.012, -0.022],
+];
 
 export async function fetchMachines(district: string = "sangrur"): Promise<MachineInfo[]> {
   const dKey = district.toLowerCase();
@@ -73,12 +108,33 @@ export async function fetchMachines(district: string = "sangrur"): Promise<Machi
   } catch (e) {}
 
   const geo = DISTRICT_GEO[dKey] || DISTRICT_GEO.sangrur;
-  return [
-    { id: `m-${dKey}-1`, machine_type: "super_seeder", district: dKey, status: "in_use", current_lat: geo.lat + 0.005, current_lon: geo.lon - 0.007, capacity_acres_per_day: 15, operator_name: geo.operators[0] },
-    { id: `m-${dKey}-2`, machine_type: "baler", district: dKey, status: "in_use", current_lat: geo.lat + 0.018, current_lon: geo.lon + 0.005, capacity_acres_per_day: 25, operator_name: geo.operators[1] },
-    { id: `m-${dKey}-3`, machine_type: "happy_seeder", district: dKey, status: "available", current_lat: geo.lat - 0.014, current_lon: geo.lon - 0.012, capacity_acres_per_day: 12, operator_name: geo.operators[2] },
-    { id: `m-${dKey}-4`, machine_type: "baler", district: dKey, status: "available", current_lat: geo.lat + 0.027, current_lon: geo.lon + 0.021, capacity_acres_per_day: 25, operator_name: geo.operators[3] },
+  const mTypes: ("super_seeder" | "baler" | "happy_seeder" | "baler" | "super_seeder" | "rake")[] = [
+    "super_seeder",
+    "baler",
+    "happy_seeder",
+    "baler",
+    "super_seeder",
+    "rake",
   ];
+
+  return Array.from({ length: 6 }, (_, idx) => {
+    const i = idx + 1;
+    const [dlat, dlon] = MACHINE_OFFSETS[idx % MACHINE_OFFSETS.length];
+    const mType = mTypes[idx % mTypes.length];
+    const inUse = i % 2 === 1;
+    const op = geo.operators[idx % geo.operators.length] || `Operator ${i}`;
+
+    return {
+      id: `m-${dKey}-${i}`,
+      machine_type: mType,
+      district: dKey,
+      status: inUse ? "in_use" : "available",
+      current_lat: Number((geo.lat + dlat).toFixed(4)),
+      current_lon: Number((geo.lon + dlon).toFixed(4)),
+      capacity_acres_per_day: mType === "super_seeder" ? 15 : mType === "baler" ? 25 : 12,
+      operator_name: op,
+    };
+  });
 }
 
 const DISTRICT_APPROVALS: Record<string, ApprovalItem[]> = {
