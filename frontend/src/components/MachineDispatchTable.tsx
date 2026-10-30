@@ -36,30 +36,40 @@ export const MachineDispatchTable: React.FC<TableProps> = ({ machines }) => {
                 </td>
               </tr>
             ) : (
-              machines.map((m) => (
-                <tr key={m.id} className="hover:bg-slate-800/40">
-                  <td className="py-2.5 px-4 font-mono font-medium text-white">{m.id.substring(0, 8)}</td>
-                  <td className="py-2.5 px-4">
-                    <span className="capitalize">{m.machine_type.replace(/_/g, " ")}</span>
-                  </td>
-                  <td className="py-2.5 px-4">{m.operator_name || "Unassigned"}</td>
-                  <td className="py-2.5 px-4 font-mono">{m.capacity_acres_per_day} ac/day</td>
-                  <td className="py-2.5 px-4">
-                    <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                        m.status === "in_use"
-                          ? "bg-amber-950 text-amber-300 border border-amber-800"
-                          : m.status === "available"
-                          ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
-                          : "bg-red-950 text-red-300 border border-red-800"
-                      }`}
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full bg-current"></span>
-                      {m.status.toUpperCase()}
-                    </span>
-                  </td>
-                </tr>
-              ))
+              machines.map((m) => {
+                const typeCode = m.machine_type
+                  .split("_")
+                  .map((w) => w[0].toUpperCase())
+                  .join("");
+                const distCode = (m.district || "SEC").substring(0, 3).toUpperCase();
+                const numCode = m.id.replace(/[^0-9]/g, "").slice(-2) || "01";
+                const badgeId = `${typeCode}-${distCode}-${numCode}`;
+
+                return (
+                  <tr key={m.id} className="hover:bg-slate-800/40">
+                    <td className="py-2.5 px-4 font-mono font-semibold text-cyan-300">{badgeId}</td>
+                    <td className="py-2.5 px-4">
+                      <span className="capitalize">{m.machine_type.replace(/_/g, " ")}</span>
+                    </td>
+                    <td className="py-2.5 px-4">{m.operator_name || "Unassigned"}</td>
+                    <td className="py-2.5 px-4 font-mono">{m.capacity_acres_per_day} ac/day</td>
+                    <td className="py-2.5 px-4">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          m.status === "in_use"
+                            ? "bg-amber-950 text-amber-300 border border-amber-800"
+                            : m.status === "available"
+                            ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                            : "bg-red-950 text-red-300 border border-red-800"
+                        }`}
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-current"></span>
+                        {m.status.toUpperCase()}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

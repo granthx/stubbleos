@@ -25,30 +25,34 @@ export default function DashboardPage() {
   const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadData = async (targetDistrict: string) => {
-    setLoading(true);
-    try {
-      const [sumData, fldData, machData, appData] = await Promise.all([
-        fetchDistrictSummary(targetDistrict),
-        fetchFields(targetDistrict),
-        fetchMachines(targetDistrict),
-        fetchApprovals(targetDistrict),
-      ]);
-      setSummary(sumData);
-      setFields(fldData);
-      setMachines(machData);
-      setApprovals(appData);
-    } catch (e) {
-      console.error("Failed to load dashboard data", e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadData(district);
-    const interval = setInterval(() => loadData(district), 15000);
-    return () => clearInterval(interval);
+    let isCancelled = false;
+
+    const run = async () => {
+      try {
+        const [sumData, fldData, machData, appData] = await Promise.all([
+          fetchDistrictSummary(district),
+          fetchFields(district),
+          fetchMachines(district),
+          fetchApprovals(district),
+        ]);
+        if (!isCancelled) {
+          setSummary(sumData);
+          setFields(fldData);
+          setMachines(machData);
+          setApprovals(appData);
+        }
+      } catch (e) {
+        console.error("Failed to load dashboard data", e);
+      }
+    };
+
+    run();
+    const interval = setInterval(run, 15000);
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
   }, [district]);
 
   const handleResolveApproval = async (id: string, decision: "approved" | "rejected") => {
@@ -77,7 +81,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex flex-col gap-6">
             <ApprovalQueue approvals={approvals} onResolve={handleResolveApproval} />
-            <FarmerDialogueFeed />
+            <FarmerDialogueFeed district={district} />
           </div>
         </div>
 
@@ -87,7 +91,7 @@ export default function DashboardPage() {
             <MachineDispatchTable machines={machines} />
           </div>
           <div>
-            <BiomassMarketplace />
+            <BiomassMarketplace district={district} />
           </div>
         </div>
       </main>

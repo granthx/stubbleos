@@ -51,6 +51,20 @@ DISTRICT_SPECS: dict[str, dict[str, Any]] = {
 }
 
 
+FIELD_OFFSETS: list[tuple[float, float]] = [
+    (-0.024, -0.019),
+    (0.016, -0.026),
+    (-0.032, 0.014),
+    (0.009, 0.027),
+    (0.031, -0.006),
+    (-0.011, 0.036),
+    (0.035, 0.021),
+    (-0.027, 0.004),
+    (0.019, -0.031),
+    (-0.004, -0.012),
+]
+
+
 def _seed_mock_fields() -> None:
     if MOCK_FIELDS:
         return
@@ -67,15 +81,16 @@ def _seed_mock_fields() -> None:
             burn_score = (
                 0.96 if is_burn else (0.82 if state == FieldState.HARVESTED_RESIDUE_PRESENT else 0.08)
             )
-            lat = float(spec["lat_base"]) + ((i % 4) * 0.02) - 0.03
-            lon = float(spec["lon_base"]) + ((i // 4) * 0.02) - 0.02
+            dlat, dlon = FIELD_OFFSETS[(i - 1) % len(FIELD_OFFSETS)]
+            lat = float(spec["lat_base"]) + dlat
+            lon = float(spec["lon_base"]) + dlon
 
             MOCK_FIELDS[f_id] = FieldResponse(
                 id=f_id,
                 farmer_id=uuid4(),
                 district=dist_name,
                 village_code=f"{spec['prefix']}-00{i}",
-                area_acres=float(2.0 + (i % 5)),
+                area_acres=float(2.5 + (i % 5)),
                 state=state,
                 state_confidence=0.94 if is_burn else 0.91,
                 burn_risk_score=burn_score,

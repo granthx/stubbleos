@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Flame, Layers, MapPin, Navigation, Tractor } from "lucide-react";
 import { FieldInfo, MachineInfo } from "../types";
 
@@ -11,34 +11,50 @@ interface MapProps {
 export const DistrictMap: React.FC<MapProps> = ({ fields, machines, district = "sangrur" }) => {
   const [selectedField, setSelectedField] = useState<FieldInfo | null>(null);
 
+  // Reset selected field when district changes to prevent stuck modal glitches
+  useEffect(() => {
+    setSelectedField(null);
+  }, [district]);
+
   // Dynamically compute bounds from all fields and machines in the selected district
   const allLats = [...fields.map((f) => f.center_lat), ...machines.map((m) => m.current_lat)];
   const allLons = [...fields.map((f) => f.center_lon), ...machines.map((m) => m.current_lon)];
 
-  let minLat = 30.22, maxLat = 30.38;
-  let minLon = 75.80, maxLon = 75.98;
+  let minLat = 30.20, maxLat = 30.40;
+  let minLon = 75.75, maxLon = 76.00;
 
   if (allLats.length > 0 && allLons.length > 0) {
     const rawMinLat = Math.min(...allLats);
     const rawMaxLat = Math.max(...allLats);
     const rawMinLon = Math.min(...allLons);
     const rawMaxLon = Math.max(...allLons);
-    const padLat = Math.max(0.015, (rawMaxLat - rawMinLat) * 0.2);
-    const padLon = Math.max(0.015, (rawMaxLon - rawMinLon) * 0.2);
+    const padLat = Math.max(0.015, (rawMaxLat - rawMinLat) * 0.22);
+    const padLon = Math.max(0.015, (rawMaxLon - rawMinLon) * 0.22);
     minLat = rawMinLat - padLat;
     maxLat = rawMaxLat + padLat;
     minLon = rawMinLon - padLon;
     maxLon = rawMaxLon + padLon;
   }
 
-  const toX = (lon: number) => Math.max(5, Math.min(95, ((lon - minLon) / Math.max(0.001, maxLon - minLon)) * 90 + 5));
-  const toY = (lat: number) => Math.max(5, Math.min(95, (1 - (lat - minLat) / Math.max(0.001, maxLat - minLat)) * 90 + 5));
+  const toX = (lon: number) => Math.max(8, Math.min(92, ((lon - minLon) / Math.max(0.001, maxLon - minLon)) * 84 + 8));
+  const toY = (lat: number) => Math.max(8, Math.min(92, (1 - (lat - minLat) / Math.max(0.001, maxLat - minLat)) * 84 + 8));
 
   const stateColors: Record<string, { bg: string; border: string; label: string }> = {
     cleared: { bg: "fill-emerald-500/30", border: "stroke-emerald-400", label: "Cleared (No Fire Risk)" },
     harvested_residue_present: { bg: "fill-amber-500/30", border: "stroke-amber-400", label: "Harvested (Residue Present)" },
     burn_detected: { bg: "fill-red-500/50", border: "stroke-red-400", label: "Active Fire Alert (FIRMS)" },
     not_harvested: { bg: "fill-slate-600/20", border: "stroke-slate-500", label: "Standing Crop" },
+  };
+
+  const getPolygonPoints = (cx: number, cy: number, index: number) => {
+    const shapes = [
+      `${cx - 3.2},${cy - 2.2} ${cx + 3.4},${cy - 2.5} ${cx + 3.1},${cy + 2.3} ${cx - 2.9},${cy + 2.6}`,
+      `${cx - 4.2},${cy - 1.8} ${cx + 4.0},${cy - 1.6} ${cx + 3.7},${cy + 1.9} ${cx - 3.9},${cy + 2.1}`,
+      `${cx - 2.8},${cy - 3.1} ${cx + 2.7},${cy - 2.0} ${cx + 3.4},${cy + 2.8} ${cx - 3.0},${cy + 2.2}`,
+      `${cx - 3.5},${cy - 2.5} ${cx + 3.6},${cy - 2.4} ${cx + 3.3},${cy + 3.0} ${cx - 3.1},${cy + 2.8}`,
+      `${cx - 2.3},${cy - 2.9} ${cx + 3.5},${cy - 1.9} ${cx + 2.7},${cy + 2.8} ${cx - 3.3},${cy + 2.0}`,
+    ];
+    return shapes[index % shapes.length];
   };
 
   const burnCount = fields.filter((f) => f.state === "burn_detected").length;
@@ -49,9 +65,13 @@ export const DistrictMap: React.FC<MapProps> = ({ fields, machines, district = "
         <div className="flex items-center gap-2">
           <Layers className="h-4 w-4 text-emerald-400" />
           <h2 className="text-sm font-semibold text-white capitalize">{district} Geospatial Field Monitoring & Route Map</h2>
-          {burnCount > 0 && (
+          {burnCount > 0 ? (
             <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-950/80 text-red-400 border border-red-800 font-mono font-medium animate-pulse">
-              {burnCount} Anomalies
+              {burnCount} Thermal Anomalies
+            </span>
+          ) : (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800 font-mono font-medium">
+              Zero Fires
             </span>
           )}
         </div>
@@ -88,20 +108,28 @@ export const DistrictMap: React.FC<MapProps> = ({ fields, machines, district = "
           </defs>
           <rect width="100" height="100" fill="url(#grid)" />
 
-          {/* Machine dispatch route traces */}
+          {/* Machine dispatch route traces connecting directly to target fields */}
           {machines.map((m, idx) => {
-            const x = toX(m.current_lon);
-            const y = toY(m.current_lat);
+            const mx = toX(m.current_lon);
+            const my = toY(m.current_lat);
+            const targetField = fields.length > 0 ? fields[idx % fields.length] : null;
+            if (!targetField) return null;
+            const fx = toX(targetField.center_lon);
+            const fy = toY(targetField.center_lat);
+            const cpx = (mx + fx) / 2 + ((idx % 2 === 0 ? 1 : -1) * 8);
+            const cpy = (my + fy) / 2 - 8;
+
             return (
-              <path
-                key={`route-${m.id}`}
-                d={`M ${x - 10} ${y + 8} Q ${x - 4} ${y - 6} ${x} ${y}`}
-                fill="none"
-                stroke="#06b6d4"
-                strokeWidth="0.6"
-                strokeDasharray="1.5,1"
-                opacity="0.6"
-              />
+              <g key={`route-${m.id}`}>
+                <path
+                  d={`M ${mx} ${my} Q ${cpx} ${cpy} ${fx} ${fy}`}
+                  fill="none"
+                  stroke={m.status === "in_use" ? "#06b6d4" : "#475569"}
+                  strokeWidth={m.status === "in_use" ? "0.8" : "0.5"}
+                  strokeDasharray={m.status === "in_use" ? "2,1.5" : "1,2"}
+                  opacity={m.status === "in_use" ? 0.75 : 0.3}
+                />
+              </g>
             );
           })}
 
@@ -111,20 +139,21 @@ export const DistrictMap: React.FC<MapProps> = ({ fields, machines, district = "
             const cy = toY(f.center_lat);
             const style = stateColors[f.state] || stateColors.not_harvested;
             const isFire = f.state === "burn_detected";
+            const polygonPoints = getPolygonPoints(cx, cy, i);
 
             return (
               <g
                 key={f.id}
                 onClick={() => setSelectedField(f)}
-                className="cursor-pointer transition-transform hover:scale-110"
+                className="cursor-pointer transition-transform hover:scale-105"
               >
                 <polygon
-                  points={`${cx - 3},${cy - 2} ${cx + 3},${cy - 2.5} ${cx + 3.5},${cy + 2.5} ${cx - 2.5},${cy + 3}`}
+                  points={polygonPoints}
                   className={`${style.bg} ${style.border}`}
                   strokeWidth={isFire ? "1" : "0.5"}
                 />
                 {isFire && (
-                  <circle cx={cx} cy={cy} r="3" fill="#ef4444" opacity="0.3" className="animate-ping" />
+                  <circle cx={cx} cy={cy} r="3.5" fill="#ef4444" opacity="0.3" className="animate-ping" />
                 )}
               </g>
             );
@@ -134,9 +163,25 @@ export const DistrictMap: React.FC<MapProps> = ({ fields, machines, district = "
           {machines.map((m) => {
             const mx = toX(m.current_lon);
             const my = toY(m.current_lat);
+            const isInUse = m.status === "in_use";
+            const typeCode = m.machine_type === "super_seeder" ? "SS" : m.machine_type === "baler" ? "BL" : "HS";
+
             return (
-              <g key={m.id} transform={`translate(${mx}, ${my})`}>
-                <circle r="1.8" fill="#06b6d4" stroke="#ffffff" strokeWidth="0.5" />
+              <g key={m.id} transform={`translate(${mx}, ${my})`} className="cursor-pointer">
+                {isInUse && (
+                  <circle r="3.5" fill="#06b6d4" opacity="0.25" className="animate-ping" />
+                )}
+                <circle r="2.2" fill={isInUse ? "#0891b2" : "#059669"} stroke="#ffffff" strokeWidth="0.5" />
+                <text
+                  y="0.8"
+                  textAnchor="middle"
+                  fontSize="1.6"
+                  fontWeight="bold"
+                  fill="#ffffff"
+                  className="select-none pointer-events-none"
+                >
+                  {typeCode}
+                </text>
               </g>
             );
           })}
@@ -144,7 +189,7 @@ export const DistrictMap: React.FC<MapProps> = ({ fields, machines, district = "
 
         {/* Selected Field Modal / Overlay */}
         {selectedField && (
-          <div className="absolute bottom-4 left-4 bg-slate-900/95 border border-slate-700 rounded-lg p-3 w-72 text-xs shadow-xl backdrop-blur">
+          <div className="absolute bottom-4 left-4 bg-slate-900/95 border border-slate-700 rounded-lg p-3 w-72 text-xs shadow-xl backdrop-blur z-20">
             <div className="flex items-center justify-between pb-2 border-b border-slate-800">
               <span className="font-semibold text-white">Parcel {selectedField.village_code}</span>
               <button
@@ -180,4 +225,3 @@ export const DistrictMap: React.FC<MapProps> = ({ fields, machines, district = "
     </div>
   );
 };
-

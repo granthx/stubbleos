@@ -79,6 +79,16 @@ DISTRICT_MACHINE_SPECS: dict[str, dict[str, Any]] = {
 }
 
 
+MACHINE_OFFSETS: list[tuple[float, float]] = [
+    (-0.015, -0.012),
+    (0.018, 0.015),
+    (-0.022, 0.024),
+    (0.025, -0.018),
+    (-0.008, 0.012),
+    (0.012, -0.022),
+]
+
+
 def _seed_mock_machines() -> None:
     if MOCK_MACHINES:
         return
@@ -92,11 +102,12 @@ def _seed_mock_machines() -> None:
     ]
     for d_counter, (dist_name, spec) in enumerate(DISTRICT_MACHINE_SPECS.items(), start=1):
         for i, op_name in enumerate(spec["operators"], start=1):
-            m_id = UUID(f"00000000-0000-0001-{d_counter:04d}-{i:012d}")
+            m_id = UUID(f"200{d_counter}000{i}-0000-0000-0000-{i:012d}")
             m_type = m_types[(i - 1) % len(m_types)]
             m_status = MachineStatus.IN_USE if (i % 2 == 1) else MachineStatus.AVAILABLE
-            lat = float(spec["lat"]) + ((i % 3) * 0.015) - 0.015
-            lon = float(spec["lon"]) + ((i // 3) * 0.015) - 0.015
+            dlat, dlon = MACHINE_OFFSETS[(i - 1) % len(MACHINE_OFFSETS)]
+            lat = float(spec["lat"]) + dlat
+            lon = float(spec["lon"]) + dlon
             cap = (
                 15.0
                 if m_type == MachineType.SUPER_SEEDER
