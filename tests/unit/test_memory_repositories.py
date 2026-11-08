@@ -1,4 +1,4 @@
-"""Unit tests for Phase 6 Vector Memory, Conversation, and Contract Repositories."""
+"""Unit tests for Vector Memory, Conversation, and Contract Repositories."""
 
 from __future__ import annotations
 
