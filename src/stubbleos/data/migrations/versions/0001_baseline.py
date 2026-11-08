@@ -1,4 +1,4 @@
-"""Baseline schema: core + pii schemas, all Phase-1 tables, audit-log immutability trigger.
+"""Baseline schema: core + pii schemas, all tables, audit-log immutability trigger.
 
 DELIBERATE SHORTCUT (ADR-0004): this baseline calls ``metadata.create_all`` instead of listing every
 table. That is acceptable ONLY because no database exists before this revision. Every later migration

@@ -13,7 +13,7 @@ class PersistingEventSink:
         self._factory = session_factory
 
     async def __call__(self, event: Event) -> None:
-        # Sync DB call; acceptable at Phase-1/simulation scale. Move to an async engine or a
+        # Sync DB call; acceptable at simulation scale. Move to an async engine or a
         # worker queue if profiling shows event-loop stalls (tracked in ROADMAP).
         with self._factory() as session:
             AgentEventRepository(session).add(event)

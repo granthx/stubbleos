@@ -1,4 +1,4 @@
-"""Repositories for the Phase-1 aggregates: agent events, consent ledger, hash-chained audit log."""
+"""Repositories for the aggregates: agent events, consent ledger, hash-chained audit log."""
 
 from __future__ import annotations
 
@@ -467,7 +467,7 @@ class FieldRepository:
         return list(self._s.scalars(stmt).all())
 
 
-# =============================================================================== Phase-6 repositories
+# =============================================================================== Dialogue and Contract repositories
 
 
 class ConversationRepository:

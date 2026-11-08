@@ -1,4 +1,4 @@
-"""Engine and session helpers (sync; the async engine arrives with the Phase-7 API)."""
+"""Engine and session helpers ."""
 
 from __future__ import annotations
 
