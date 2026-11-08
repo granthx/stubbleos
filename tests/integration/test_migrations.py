@@ -72,8 +72,8 @@ def test_impact_label_constraint_rejects_unlabeled_rows(engine: Engine) -> None:
         c.execute(
             text(
                 "INSERT INTO core.impact_records (id, field_id, season, status, label, burn_avoided, area_acres, "
-                "method_note, evidence_ids, record_sha256) VALUES (gen_random_uuid(), gen_random_uuid(), 's', "
-                "'indicative', 'verified carbon credit', true, 1, '', '[]', 'x')"
+                "method_note, evidence_ids, record_sha256, is_synthetic) VALUES (gen_random_uuid(), gen_random_uuid(), 's', "
+                "'indicative', 'verified carbon credit', true, 1, '', '[]', 'x', true)"
             )
         )
 

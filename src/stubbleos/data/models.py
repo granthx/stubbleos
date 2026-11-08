@@ -28,6 +28,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Uuid,
     func,
+    text,
 )
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB
@@ -393,7 +394,7 @@ class MrvEvidence(Base):
     result: Mapped[dict[str, Any]] = mapped_column(JSONType)
     sha256: Mapped[str] = mapped_column(String(64))
     captured_at: Mapped[datetime] = mapped_column()
-    is_synthetic: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_synthetic: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     created_at: Mapped[datetime] = created_at_col()
 
 
@@ -418,7 +419,7 @@ class ImpactRecord(Base):
     method_note: Mapped[str] = mapped_column(Text, default="")
     evidence_ids: Mapped[list[str]] = mapped_column(JSONType, default=list)
     record_sha256: Mapped[str] = mapped_column(String(64))
-    is_synthetic: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_synthetic: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     created_at: Mapped[datetime] = created_at_col()
 
 
