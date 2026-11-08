@@ -130,7 +130,7 @@ class Event(StrictModel):
         return get_payload_type(self.event_type).model_validate(self.payload)
 
 
-# --------------------------------------------------------------------------- Phase-1 payloads
+# --------------------------------------------------------------------------- Core payloads
 
 
 @register_event("field.state_changed")
@@ -196,7 +196,7 @@ class PolicyViolationDetected(EventPayload):
     detail: str
 
 
-# --------------------------------------------------------------------------- Phase-6 payloads
+# --------------------------------------------------------------------------- Dialogue payloads
 
 
 @register_event("farmer.inbound_message")
@@ -399,7 +399,7 @@ class RedisEventBus(EventBus):
 
     Publishing does not dispatch locally: a process sees its own events only through its own
     listener, so every process observes the same ordering Redis gives it. UNVERIFIED in the
-    Phase-1 sandbox (no Redis available); covered by tests/integration/test_redis_bus.py when
+    Local sandbox (no Redis available); covered by tests/integration/test_redis_bus.py when
     ``STUBBLEOS_REDIS_URL`` is reachable.
     """
 

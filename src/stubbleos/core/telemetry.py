@@ -25,7 +25,7 @@ def setup_tracing(settings: Settings) -> bool:
         _tracer = None
         return False
     provider = TracerProvider(resource=Resource.create({"service.name": "stubbleos"}))
-    # Exporter wiring (OTLP) is added with the observability work in Phase 7; spans are
+    # Exporter wiring (OTLP) is added with the observability work ; spans are
     # created and propagated now so instrumentation points exist from day one.
     trace.set_tracer_provider(provider)
     _tracer = trace.get_tracer("stubbleos")

@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     # Privacy
     pseudonym_salt: SecretStr = SecretStr(DEV_ONLY_SALT)
 
-    # Outreach policy (IST wall-clock hours; enforced by the Policy Guard in Phase 4)
+    # Outreach policy (IST wall-clock hours; enforced by the Policy Guard)
     contact_hours_start: int = Field(default=8, ge=0, le=23)
     contact_hours_end: int = Field(default=19, ge=1, le=24)
     whatsapp_enabled: bool = False  # real delivery is off unless explicitly enabled
@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     otel_enabled: bool = False
     otel_endpoint: str | None = None
 
-    # Geo & Remote Sensing (Phase 5)
+    # Geo & Remote Sensing
     stac_api_url: str = "https://earth-search.aws.element84.com/v1"
     firms_api_key: SecretStr | None = Field(
         default=None,
@@ -65,13 +65,13 @@ class Settings(BaseSettings):
     geo_client_max_retries: int = Field(default=3, ge=0, le=10)
     offline_fixtures_dir: str = "tests/fixtures"
 
-    # Field Monitor Thresholds (Phase 5)
+    # Field Monitor Thresholds
     ndvi_harvest_drop_threshold: float = Field(default=0.25, ge=0.0, le=1.0)
     bsi_cleared_threshold: float = Field(default=0.15, ge=-1.0, le=1.0)
     firms_confidence_threshold: float = Field(default=50.0, ge=0.0, le=100.0)
     field_monitor_min_confidence_approval: float = Field(default=0.70, ge=0.0, le=1.0)
 
-    # Weather & Window Thresholds (Phase 5)
+    # Weather & Window Thresholds
     max_workable_rain_mm: float = Field(default=2.0, ge=0.0)
     max_workable_wind_kmh: float = Field(default=35.0, ge=0.0)
     max_soil_moisture_index: float = Field(default=0.40, ge=0.0, le=1.0)
