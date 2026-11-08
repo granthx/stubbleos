@@ -3,22 +3,84 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 248, 250, 252;
-  --background-start-rgb: 2, 6, 23;
-  --background-end-rgb: 15, 23, 42;
+  --paper: #FFFFFF;
+  --paper-subtle: #F7F8FA;
+  --ink: #0A0A0A;
+  --ink-secondary: #1E2544;
+  --radius: 26px;
+  --maxw: 1440px;
+  --muted: #8B8B8B;
+  --muted-light: #B3B9CA;
+  --wild-blue-gray: #6B7385;
+  --line-2: rgba(10, 10, 10, 0.06);
+  --red: #E0492A;
+  --line: rgba(10, 10, 10, 0.12);
+  --mono: "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+  --neon: #D8FF00;
+  --neon-lime: #DCFC04;
+  --straw: #F6D36D;
+  --gutter: 56px;
+  --cell: 14px;
+  --readw: 34ch;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
-  min-height: 100vh;
+  color: var(--ink);
+  background-color: var(--paper);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* Swiss typography classes */
+.font-swiss-title {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: -0.04em;
+  line-height: 0.92;
+  font-weight: 700;
+}
+
+.font-swiss-mono {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Marquee infinite scroll */
+@keyframes marqueeLeft {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee-left {
+  display: flex;
+  width: max-content;
+  animation: marqueeLeft 35s linear infinite;
+}
+
+.animate-marquee-left:hover {
+  animation-play-state: paused;
+}
+
+/* Pixel Art Wave Canvas styling */
+.pixel-canvas-container {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #0A0A0A;
+}
+
+/* Radar & route animations for map */
 @keyframes mapDash {
   from {
     stroke-dashoffset: 24;
@@ -47,3 +109,34 @@ body {
   animation: radarWave 2s cubic-bezier(0, 0.2, 0.8, 1) infinite;
 }
 
+/* Rigid grid hairline borders */
+.hairline-border-b {
+  border-bottom: 1px solid var(--line);
+}
+
+.hairline-border-r {
+  border-right: 1px solid var(--line);
+}
+
+.hairline-border {
+  border: 1px solid var(--line);
+}
+
+/* Custom scrollbars for clean technical aesthetic */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F1F2F4;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #C4C8D0;
+  border-radius: 0px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8B8B8B;
+}
