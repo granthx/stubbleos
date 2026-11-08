@@ -1,4 +1,4 @@
-"""Unit tests for Phase 8 evaluation matrix and benchmarks."""
+"""Unit tests for evaluation matrix and benchmarks."""
 
 from __future__ import annotations
 
