@@ -384,77 +384,77 @@ export const DistrictMap: React.FC<MapProps> = ({ fields, machines, district = "
   }, [config, minLon, maxLon, minLat, maxLat]);
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col h-[560px] shadow-2xl relative select-none">
+    <div className="border border-ink/15 bg-paper rounded-none md:rounded-md overflow-hidden flex flex-col h-[560px] shadow-sm relative select-none">
       {/* Top Header Bar */}
-      <div className="px-4 py-2.5 border-b border-slate-800 bg-slate-900/90 flex flex-wrap items-center justify-between gap-3 backdrop-blur z-20">
+      <div className="px-4 py-2.5 border-b border-ink/10 bg-paper flex flex-wrap items-center justify-between gap-3 z-20">
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-lg bg-emerald-950/80 border border-emerald-700/60 text-emerald-400">
-            <Layers className="h-4 w-4" />
+          <div className="p-1.5 bg-ink text-paper">
+            <Layers className="h-4 w-4 text-neon" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold text-white tracking-wide">
-                {config.name} GIS Cadastre & Route Command Center
+              <h2 className="text-xs font-mono font-bold text-ink uppercase tracking-wider">
+                [06 // {config.name} GIS CADASTRE & DISPATCH RADAR]
               </h2>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+              <span className="text-[10px] font-mono px-1.5 py-0.2 bg-paper-subtle text-ink border border-ink/20">
                 {config.state}
               </span>
               {burnCount > 0 ? (
-                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-red-950 text-red-400 border border-red-800/90 font-mono font-semibold flex items-center gap-1 animate-pulse">
-                  <Flame className="h-3 w-3 text-red-400" />
+                <span className="text-[10px] px-2.5 py-0.5 bg-wild-red text-white font-mono font-bold uppercase flex items-center gap-1 animate-pulse">
+                  <Flame className="h-3 w-3 text-white" />
                   {burnCount} FIRMS Thermal {burnCount === 1 ? "Hotspot" : "Hotspots"}
                 </span>
               ) : (
-                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800/90 font-mono font-medium flex items-center gap-1">
-                  <Zap className="h-3 w-3 text-emerald-400" />
+                <span className="text-[10px] px-2.5 py-0.5 bg-paper-subtle text-ink border border-ink/20 font-mono font-semibold uppercase flex items-center gap-1">
+                  <Zap className="h-3 w-3 text-ink" />
                   Zero Active Fires
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[10px] text-wild-muted font-mono uppercase">
               Sentinel-2 L2A Multispectral Cadastre (10m) · CP-SAT Dynamic Fleet Router
             </p>
           </div>
         </div>
 
         {/* Filter Pills */}
-        <div className="flex items-center gap-1.5 text-xs bg-slate-950/80 p-1 rounded-lg border border-slate-800">
+        <div className="flex items-center gap-1 text-[10px] font-mono">
           <button
             onClick={() => setActiveFilter("all")}
-            className={`px-2.5 py-1 rounded font-medium transition ${
+            className={`px-2.5 py-1 uppercase border transition-colors ${
               activeFilter === "all"
-                ? "bg-slate-800 text-white shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-ink text-paper border-ink font-bold"
+                : "bg-paper text-wild-muted border-ink/15 hover:border-ink"
             }`}
           >
-            All Parcels ({fields.length})
+            All ({fields.length})
           </button>
           <button
             onClick={() => setActiveFilter("burn")}
-            className={`px-2.5 py-1 rounded font-medium transition flex items-center gap-1 ${
+            className={`px-2.5 py-1 uppercase border transition-colors flex items-center gap-1 ${
               activeFilter === "burn"
-                ? "bg-red-950 text-red-300 border border-red-800"
-                : "text-slate-400 hover:text-red-400"
+                ? "bg-wild-red text-white border-wild-red font-bold"
+                : "bg-paper text-wild-red border-ink/15 hover:border-wild-red"
             }`}
           >
-            <Flame className="h-3 w-3 text-red-400" /> Fires ({burnCount})
+            <Flame className="h-3 w-3" /> Fires ({burnCount})
           </button>
           <button
             onClick={() => setActiveFilter("residue")}
-            className={`px-2.5 py-1 rounded font-medium transition flex items-center gap-1 ${
+            className={`px-2.5 py-1 uppercase border transition-colors flex items-center gap-1 ${
               activeFilter === "residue"
-                ? "bg-amber-950 text-amber-300 border border-amber-800"
-                : "text-slate-400 hover:text-amber-300"
+                ? "bg-straw text-ink border-ink font-bold"
+                : "bg-paper text-ink border-ink/15 hover:border-ink"
             }`}
           >
-            <Wheat className="h-3 w-3 text-amber-400" /> Residue ({residueCount})
+            <Wheat className="h-3 w-3" /> Residue ({residueCount})
           </button>
           <button
             onClick={() => setActiveFilter("cleared")}
-            className={`px-2.5 py-1 rounded font-medium transition flex items-center gap-1 ${
+            className={`px-2.5 py-1 uppercase border transition-colors flex items-center gap-1 ${
               activeFilter === "cleared"
-                ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
-                : "text-slate-400 hover:text-emerald-300"
+                ? "bg-neon text-ink border-ink font-bold"
+                : "bg-paper text-ink border-ink/15 hover:border-ink"
             }`}
           >
             Cleared ({clearedCount})
@@ -462,14 +462,14 @@ export const DistrictMap: React.FC<MapProps> = ({ fields, machines, district = "
         </div>
 
         {/* Layer Visibility Toggles */}
-        <div className="flex items-center gap-2 text-[11px]">
+        <div className="flex items-center gap-1.5 text-[10px] font-mono">
           <button
             onClick={() => setShowRoads((v) => !v)}
             title="Toggle Rural Road Network"
-            className={`px-2 py-1 rounded border font-medium transition flex items-center gap-1 ${
+            className={`px-2 py-1 uppercase border transition flex items-center gap-1 ${
               showRoads
-                ? "bg-cyan-950/80 border-cyan-700/80 text-cyan-300"
-                : "bg-slate-900 border-slate-800 text-slate-500"
+                ? "bg-ink text-paper border-ink font-bold"
+                : "bg-paper text-wild-muted border-ink/15 hover:border-ink"
             }`}
           >
             <span>🛣️ Roads</span>
@@ -477,10 +477,10 @@ export const DistrictMap: React.FC<MapProps> = ({ fields, machines, district = "
           <button
             onClick={() => setShowRoutes((v) => !v)}
             title="Toggle Fleet Dispatch Corridors"
-            className={`px-2 py-1 rounded border font-medium transition flex items-center gap-1 ${
+            className={`px-2 py-1 uppercase border transition flex items-center gap-1 ${
               showRoutes
-                ? "bg-cyan-950/80 border-cyan-700/80 text-cyan-300"
-                : "bg-slate-900 border-slate-800 text-slate-500"
+                ? "bg-ink text-paper border-ink font-bold"
+                : "bg-paper text-wild-muted border-ink/15 hover:border-ink"
             }`}
           >
             <span>🚜 Routes ({activeFleetCount})</span>
@@ -488,10 +488,10 @@ export const DistrictMap: React.FC<MapProps> = ({ fields, machines, district = "
           <button
             onClick={() => setShowThermal((v) => !v)}
             title="Toggle Thermal Anomaly Overlay"
-            className={`px-2 py-1 rounded border font-medium transition flex items-center gap-1 ${
+            className={`px-2 py-1 uppercase border transition flex items-center gap-1 ${
               showThermal
-                ? "bg-red-950/80 border-red-700/80 text-red-300"
-                : "bg-slate-900 border-slate-800 text-slate-500"
+                ? "bg-wild-red text-white border-wild-red font-bold"
+                : "bg-paper text-wild-muted border-ink/15 hover:border-ink"
             }`}
           >
             <span>🔥 Thermal</span>
@@ -499,10 +499,10 @@ export const DistrictMap: React.FC<MapProps> = ({ fields, machines, district = "
           <button
             onClick={() => setShowGrid((v) => !v)}
             title="Toggle Coordinate Grid"
-            className={`px-2 py-1 rounded border font-medium transition flex items-center gap-1 ${
+            className={`px-2 py-1 uppercase border transition flex items-center gap-1 ${
               showGrid
-                ? "bg-slate-800 border-slate-700 text-slate-200"
-                : "bg-slate-900 border-slate-800 text-slate-500"
+                ? "bg-ink/10 text-ink border-ink/30 font-bold"
+                : "bg-paper text-wild-muted border-ink/15 hover:border-ink"
             }`}
           >
             <span>🛰️ Grid</span>
@@ -1065,129 +1065,129 @@ export const DistrictMap: React.FC<MapProps> = ({ fields, machines, district = "
         </svg>
 
         {/* Floating Zoom & GIS Controls */}
-        <div className="absolute top-4 right-4 flex flex-col gap-1.5 bg-slate-900/95 border border-slate-700/80 rounded-lg p-1.5 shadow-xl backdrop-blur z-20">
+        <div className="absolute top-4 right-4 flex flex-col gap-1.5 bg-paper border border-ink/20 p-1 shadow-md z-20 font-mono">
           <button
             onClick={handleZoomIn}
             title="Zoom In"
-            className="w-7 h-7 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center font-bold text-sm transition"
+            className="w-7 h-7 bg-paper-subtle hover:bg-ink hover:text-paper text-ink border border-ink/10 flex items-center justify-center font-bold text-sm transition"
           >
             +
           </button>
           <button
             onClick={handleZoomOut}
             title="Zoom Out"
-            className="w-7 h-7 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center font-bold text-sm transition"
+            className="w-7 h-7 bg-paper-subtle hover:bg-ink hover:text-paper text-ink border border-ink/10 flex items-center justify-center font-bold text-sm transition"
           >
             −
           </button>
           <button
             onClick={handleResetView}
             title="Reset View"
-            className="w-7 h-7 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center text-xs transition"
+            className="w-7 h-7 bg-paper-subtle hover:bg-ink hover:text-paper text-ink border border-ink/10 flex items-center justify-center text-xs transition"
           >
             <RefreshCw className="h-3.5 w-3.5" />
           </button>
-          <div className="border-t border-slate-700 pt-1 mt-0.5 text-center font-mono text-[9px] text-slate-400">
+          <div className="border-t border-ink/10 pt-1 mt-0.5 text-center font-mono text-[9px] text-wild-muted">
             {Math.round(zoom * 100)}%
           </div>
         </div>
 
         {/* Legend Overlay at Bottom Right */}
-        <div className="absolute bottom-3 right-4 bg-slate-900/90 border border-slate-800 rounded-lg px-3 py-2 text-[11px] shadow-lg backdrop-blur flex items-center gap-4 text-slate-300 z-10">
+        <div className="absolute bottom-3 right-4 bg-paper border border-ink/20 px-3 py-2 text-[10px] font-mono shadow-sm flex items-center gap-4 text-ink z-10">
           <div className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500/80 border border-emerald-400 inline-block"></span>
+            <span className="h-2.5 w-2.5 bg-neon border border-ink inline-block" />
             <span>Cleared (In-Situ)</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm bg-amber-500/80 border border-amber-400 inline-block"></span>
+            <span className="h-2.5 w-2.5 bg-straw border border-ink inline-block" />
             <span>Residue Present</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-sm bg-red-600 border border-red-400 inline-block animate-ping"></span>
-            <span className="text-red-400 font-semibold">FIRMS Fire Alert</span>
+            <span className="h-2.5 w-2.5 bg-wild-red border border-ink inline-block animate-pulse" />
+            <span className="text-wild-red font-bold">FIRMS Fire Alert</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-cyan-500 border border-white inline-block"></span>
+            <span className="h-2.5 w-2.5 bg-ink text-neon border border-neon inline-block" />
             <span>Active Machine</span>
           </div>
         </div>
 
         {/* Interactive Parcel Inspector HUD Drawer (Bottom Left) */}
         {selectedField && (
-          <div className="absolute bottom-3 left-4 bg-slate-900/95 border border-slate-700 rounded-xl p-4 w-80 text-xs shadow-2xl backdrop-blur z-30 animate-in fade-in slide-in-from-bottom-2 duration-200">
-            <div className="flex items-center justify-between pb-2.5 border-b border-slate-800">
+          <div className="absolute bottom-3 left-4 bg-paper border border-ink p-4 w-80 text-xs shadow-2xl z-30 font-mono text-ink">
+            <div className="flex items-center justify-between pb-2 border-b border-ink/10">
               <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-cyan-400" />
-                <span className="font-bold text-white text-sm">Parcel {selectedField.village_code}</span>
+                <MapPin className="h-4 w-4 text-ink" />
+                <span className="font-bold text-ink text-sm uppercase">PARCEL {selectedField.village_code}</span>
               </div>
               <button
                 onClick={() => setSelectedFieldId(null)}
-                className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition"
+                className="text-wild-muted hover:text-ink p-1 hover:bg-ink/5 transition"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="mt-3 space-y-2 text-slate-300">
-              <div className="grid grid-cols-2 gap-2 bg-slate-950/60 p-2 rounded-lg border border-slate-800/80">
+            <div className="mt-3 space-y-2 text-ink">
+              <div className="grid grid-cols-2 gap-2 bg-paper-subtle p-2 border border-ink/10 text-xs">
                 <div>
-                  <span className="text-[10px] text-slate-500 block uppercase font-medium">Cadastre Acreage</span>
-                  <span className="font-bold text-white text-xs">{selectedField.area_acres} acres</span>
+                  <span className="text-[9px] text-wild-muted block uppercase font-bold">Cadastre Acreage</span>
+                  <span className="font-bold text-ink">{selectedField.area_acres} acres</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-500 block uppercase font-medium">Estimated Straw</span>
-                  <span className="font-bold text-amber-300 text-xs">
+                  <span className="text-[9px] text-wild-muted block uppercase font-bold">Estimated Straw</span>
+                  <span className="font-bold text-ink">
                     {(selectedField.area_acres * 2.4).toFixed(1)} t dry stubble
                   </span>
                 </div>
               </div>
 
-              <div className="flex justify-between items-center py-1 border-b border-slate-800/60">
-                <span className="text-slate-400">Harvest Status:</span>
+              <div className="flex justify-between items-center py-1 border-b border-ink/10 text-[11px]">
+                <span className="text-wild-muted uppercase">Harvest Status:</span>
                 <span
-                  className={`font-semibold px-2 py-0.5 rounded text-[10px] uppercase ${
+                  className={`font-bold px-2 py-0.5 text-[10px] uppercase border ${
                     selectedField.state === "cleared"
-                      ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                      ? "bg-neon text-ink border-ink"
                       : selectedField.state === "burn_detected"
-                      ? "bg-red-950 text-red-300 border border-red-800 animate-pulse font-bold"
-                      : "bg-amber-950 text-amber-300 border border-amber-800"
+                      ? "bg-wild-red text-white border-wild-red animate-pulse"
+                      : "bg-straw text-ink border-ink"
                   }`}
                 >
                   {selectedField.state.replace(/_/g, " ")}
                 </span>
               </div>
 
-              <div className="flex justify-between items-center py-1 border-b border-slate-800/60">
-                <span className="text-slate-400">Burn Risk Index:</span>
+              <div className="flex justify-between items-center py-1 border-b border-ink/10 text-[11px]">
+                <span className="text-wild-muted uppercase">Burn Risk Index:</span>
                 <div className="flex items-center gap-2">
-                  <div className="w-16 h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="w-16 h-2 bg-paper-subtle border border-ink/20 overflow-hidden">
                     <div
                       className={`h-full ${
                         selectedField.burn_risk_score > 0.7
-                          ? "bg-red-500"
+                          ? "bg-wild-red"
                           : selectedField.burn_risk_score > 0.3
-                          ? "bg-amber-400"
-                          : "bg-emerald-500"
+                          ? "bg-straw"
+                          : "bg-neon"
                       }`}
                       style={{ width: `${Math.round(selectedField.burn_risk_score * 100)}%` }}
                     />
                   </div>
-                  <span className="font-mono font-bold text-white">
+                  <span className="font-mono font-bold text-ink">
                     {Math.round(selectedField.burn_risk_score * 100)}%
                   </span>
                 </div>
               </div>
 
-              <div className="flex justify-between items-center py-1 border-b border-slate-800/60">
-                <span className="text-slate-400">Satellite Sensor:</span>
-                <span className="font-mono text-emerald-400">
+              <div className="flex justify-between items-center py-1 border-b border-ink/10 text-[11px]">
+                <span className="text-wild-muted uppercase">Satellite Sensor:</span>
+                <span className="font-mono font-bold text-ink">
                   Sentinel-2 L2A ({Math.round(selectedField.state_confidence * 100)}%)
                 </span>
               </div>
 
-              <div className="flex justify-between items-center py-1 border-b border-slate-800/60">
-                <span className="text-slate-400">Farmgate GPS:</span>
-                <span className="font-mono text-[11px] text-slate-300">
+              <div className="flex justify-between items-center py-1 border-b border-ink/10 text-[11px]">
+                <span className="text-wild-muted uppercase">Farmgate GPS:</span>
+                <span className="font-mono text-wild-blue-gray">
                   {selectedField.center_lat.toFixed(4)}°N, {selectedField.center_lon.toFixed(4)}°E
                 </span>
               </div>
@@ -1195,17 +1195,17 @@ export const DistrictMap: React.FC<MapProps> = ({ fields, machines, district = "
               {/* Machinery Dispatch Status or 1-Click Fast Dispatch */}
               <div className="pt-2">
                 {incomingMachineForSelectedField ? (
-                  <div className="bg-cyan-950/60 border border-cyan-800/80 rounded-lg p-2.5 space-y-1">
-                    <div className="flex items-center justify-between text-cyan-300 font-semibold text-[11px]">
+                  <div className="bg-paper-subtle border border-ink p-2 space-y-1">
+                    <div className="flex items-center justify-between text-ink font-bold text-[10px] uppercase">
                       <span className="flex items-center gap-1">
-                        <Tractor className="h-3.5 w-3.5" />
+                        <Tractor className="h-3.5 w-3.5 text-neon-lime" />
                         Dispatched: {incomingMachineForSelectedField.callsign}
                       </span>
-                      <span className="text-cyan-400 font-mono text-[10px]">
-                        {incomingMachineForSelectedField.etaMinutes} mins away
+                      <span className="text-wild-red font-mono">
+                        {incomingMachineForSelectedField.etaMinutes}m ETA
                       </span>
                     </div>
-                    <div className="text-[10px] text-slate-300 flex justify-between">
+                    <div className="text-[10px] text-wild-muted flex justify-between">
                       <span>Operator: {incomingMachineForSelectedField.machine.operator_name}</span>
                       <span>{incomingMachineForSelectedField.distanceKm} km route</span>
                     </div>
@@ -1215,16 +1215,16 @@ export const DistrictMap: React.FC<MapProps> = ({ fields, machines, district = "
                     onClick={() => {
                       setFastDispatchedIds((prev) => ({ ...prev, [selectedField.id]: true }));
                     }}
-                    className={`w-full py-2 rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 transition ${
+                    className={`w-full py-2 border font-bold text-xs uppercase flex items-center justify-center gap-1.5 transition ${
                       fastDispatchedIds[selectedField.id]
-                        ? "bg-emerald-600 text-white"
-                        : "bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg shadow-cyan-600/30"
+                        ? "bg-neon text-ink border-ink"
+                        : "bg-ink hover:bg-neon hover:text-ink text-paper border-ink"
                     }`}
                   >
                     <Zap className="h-3.5 w-3.5" />
                     {fastDispatchedIds[selectedField.id]
-                      ? "Dispatched: Priority Seeder En Route"
-                      : "1-Click Fast Dispatch Nearest Baler"}
+                      ? "DISPATCHED: SEEDER EN ROUTE"
+                      : "FAST DISPATCH NEAREST BALER"}
                   </button>
                 )}
               </div>
@@ -1234,58 +1234,58 @@ export const DistrictMap: React.FC<MapProps> = ({ fields, machines, district = "
 
         {/* Selected Machine Telemetry HUD Overlay (Top Left) */}
         {selectedMachine && !selectedField && (
-          <div className="absolute top-4 left-4 bg-slate-900/95 border border-slate-700 rounded-xl p-3.5 w-76 text-xs shadow-2xl backdrop-blur z-30 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+          <div className="absolute top-4 left-4 bg-paper border border-ink p-3.5 w-76 text-xs shadow-2xl z-30 font-mono text-ink">
+            <div className="flex items-center justify-between pb-2 border-b border-ink/10">
               <div className="flex items-center gap-2">
-                <Tractor className="h-4 w-4 text-cyan-400" />
-                <span className="font-bold text-white">{selectedMachine.callsign}</span>
+                <Tractor className="h-4 w-4 text-neon-lime" />
+                <span className="font-bold text-ink uppercase">{selectedMachine.callsign}</span>
               </div>
               <button
                 onClick={() => setSelectedMachineId(null)}
-                className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800"
+                className="text-wild-muted hover:text-ink p-1 hover:bg-ink/5"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="mt-2.5 space-y-1.5 text-slate-300">
+            <div className="mt-2.5 space-y-1.5 text-ink">
               <div className="flex justify-between">
-                <span className="text-slate-400">Machine Type:</span>
-                <span className="font-semibold text-white capitalize">
+                <span className="text-wild-muted uppercase text-[10px]">Machine Type:</span>
+                <span className="font-bold text-ink capitalize">
                   {selectedMachine.machine.machine_type.replace(/_/g, " ")}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Operator:</span>
-                <span className="font-medium text-cyan-300">
+                <span className="text-wild-muted uppercase text-[10px]">Operator:</span>
+                <span className="font-bold text-ink">
                   {selectedMachine.machine.operator_name || "Unassigned"}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Daily Throughput:</span>
-                <span className="font-mono text-white">
+                <span className="text-wild-muted uppercase text-[10px]">Daily Cap:</span>
+                <span className="font-mono font-bold text-ink">
                   {selectedMachine.machine.capacity_acres_per_day} ac/day
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Status:</span>
+              <div className="flex justify-between items-center">
+                <span className="text-wild-muted uppercase text-[10px]">Status:</span>
                 <span
-                  className={`font-semibold uppercase text-[10px] px-1.5 py-0.5 rounded ${
+                  className={`font-bold uppercase text-[10px] px-2 py-0.5 border ${
                     selectedMachine.isInUse
-                      ? "bg-amber-950 text-amber-300 border border-amber-800"
-                      : "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                      ? "bg-neon text-ink border-ink"
+                      : "bg-paper-subtle text-ink border-ink/20"
                   }`}
                 >
                   {selectedMachine.machine.status.replace(/_/g, " ")}
                 </span>
               </div>
               {selectedMachine.targetField && (
-                <div className="mt-2 pt-2 border-t border-slate-800 bg-slate-950/50 p-2 rounded text-[11px]">
-                  <span className="text-slate-400 block text-[10px] uppercase font-medium">
+                <div className="mt-2 pt-2 border-t border-ink/10 bg-paper-subtle p-2 text-[11px]">
+                  <span className="text-wild-muted block text-[9px] uppercase font-bold">
                     Assigned Destination:
                   </span>
-                  <div className="flex justify-between items-center text-white font-semibold">
+                  <div className="flex justify-between items-center text-ink font-bold">
                     <span>Parcel {selectedMachine.targetField.village_code}</span>
-                    <span className="text-cyan-400 font-mono text-[10px]">
+                    <span className="text-wild-red font-mono text-[10px]">
                       {selectedMachine.etaMinutes}m ETA
                     </span>
                   </div>
