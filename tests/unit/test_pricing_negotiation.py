@@ -1,4 +1,4 @@
-"""Unit tests for Phase 6 Pricing & Negotiation agent."""
+"""Unit tests for Pricing & Negotiation agent."""
 
 from __future__ import annotations
 
@@ -173,7 +173,7 @@ def test_pricing_negotiation_graph_with_buyer_offer() -> None:
     )
 
     state = PricingState(input=inp, buyer_offer=buyer_offer)
-    res = graph.invoke(state, config={"configurable": {"thread_id": "pn_phase6_test"}})
+    res = graph.invoke(state, config={"configurable": {"thread_id": "pn_pricing_test"}})
 
     assert res["status"] == "completed"
     assert res["counter_offer"].accepted is True
