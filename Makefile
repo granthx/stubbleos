@@ -43,7 +43,7 @@ benchmark:      ## run latency, throughput and scheduler performance benchmarks
 	uv run python -m stubbleos.evals.benchmarks
 
 chaos:          ## run adversarial chaos engineering resilience suite
-	uv run pytest tests/unit/test_phase8_chaos.py
+	uv run pytest tests/unit/test_chaos_resilience.py
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage

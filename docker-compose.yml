@@ -1,5 +1,4 @@
-# Phase 1 stack: postgres(+PostGIS), redis, one-shot migration, api.
-# worker (Phase 4+) and frontend (Phase 7) are intentionally not defined yet.
+# StubbleOS services stack: postgres(+PostGIS), redis, one-shot migration, api.
 services:
   postgres:
     image: postgis/postgis:16-3.4
