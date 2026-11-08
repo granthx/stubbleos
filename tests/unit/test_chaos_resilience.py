@@ -1,4 +1,4 @@
-"""Unit tests for Phase 8 chaos engineering and resilience assertions."""
+"""Unit tests for chaos engineering and resilience assertions."""
 
 from __future__ import annotations
 
