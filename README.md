@@ -63,17 +63,6 @@ The results below are produced by reproducible multi-seed simulation runs (`make
 - **Full API & Frontend Dashboard**: Production FastAPI REST v1 routes, role-based auth and rate limiting, real-time WebSocket telemetry streaming, Next.js 14 + TypeScript command center dashboard, and live `make demo` runner.
 - **Evaluation Matrix, Benchmarks & Chaos Resilience**: 4-scenario x 4-strategy simulation matrix, statistical confidence intervals (t-CI and bootstrap percentile), chaos fault-injection suite, micro-benchmarks, and spatial k-anonymity privacy export policy.
 
-## Quickstart
-
-```bash
-uv sync --all-extras          # first run creates uv.lock; commit it
-cp .env.example .env
-make lint typecheck test      # unit tests, no external services
-make up                       # postgres+postgis, redis, migrations, api on :8000
-make test-int                 # integration tests (needs `make up`)
-curl localhost:8000/readyz
-```
-
 ## Verification Status
 
 The testing sandbox runs all unit tests, linters, and verification suites locally:
