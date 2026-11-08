@@ -1,4 +1,4 @@
-"""Unit tests for Phase 6 Farmer Voice agent."""
+"""Unit tests for Farmer Voice agent."""
 
 from __future__ import annotations
 
