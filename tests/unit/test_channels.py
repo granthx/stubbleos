@@ -1,4 +1,4 @@
-"""Unit tests for Phase 6 Messaging Channels & Router."""
+"""Unit tests for Messaging Channels & Router."""
 
 from __future__ import annotations
 
