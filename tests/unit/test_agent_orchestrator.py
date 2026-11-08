@@ -341,7 +341,7 @@ async def test_scenario_hitl_low_confidence_interrupt_and_resume(
 
     config = {"configurable": {"thread_id": "hitl_thread_1"}}
 
-    # Phase 1: Invocation halts at interrupt
+    # Step 1: Invocation halts at interrupt
     interrupted_state = await graph.ainvoke(state, config=config)
     assert "__interrupt__" in interrupted_state
     interrupt_payload = interrupted_state["__interrupt__"][0].value
@@ -358,7 +358,7 @@ async def test_scenario_hitl_low_confidence_interrupt_and_resume(
     appr_events = event_bus.of_type("approval.requested")
     assert len(appr_events) >= 1
 
-    # Phase 2: Coordinator approves and graph resumes
+    # Step 2: Coordinator approves and graph resumes
     resumed_state = await graph.ainvoke(
         Command(resume={"status": "approved", "decided_by_role": "fpo_coordinator"}),
         config=config,
@@ -406,10 +406,10 @@ async def test_scenario_hitl_rejection(
 
     config = {"configurable": {"thread_id": "hitl_thread_reject"}}
 
-    # Phase 1: Halts at interrupt
+    # Step 1: Halts at interrupt
     await graph.ainvoke(state, config=config)
 
-    # Phase 2: Coordinator rejects
+    # Step 2: Coordinator rejects
     resumed_state = await graph.ainvoke(
         Command(resume={"status": "rejected", "decided_by_role": "fpo_coordinator"}),
         config=config,

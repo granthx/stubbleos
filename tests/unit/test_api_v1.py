@@ -1,4 +1,4 @@
-"""Unit tests for Phase 7 REST API v1 endpoints and WebSockets."""
+"""Unit tests for REST API v1 endpoints and WebSockets."""
 
 from __future__ import annotations
 
