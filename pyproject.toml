@@ -28,7 +28,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Later phases; declared now so the dependency surface is visible.
 agents = ["langgraph>=0.2", "langgraph-checkpoint-postgres>=2.0", "langchain-core>=0.3"]
 optimization = ["ortools>=9.10"]
 geo = ["geopandas>=0.14", "shapely>=2.0", "rasterio>=1.3", "pystac-client>=0.8", "httpx>=0.27"]
@@ -64,7 +63,6 @@ branch = true
 
 [tool.coverage.report]
 show_missing = true
-# 80% gates on optimization/, coordination/ and agents/*/logic are enforced from Phase 3 onward.
 
 [tool.ruff]
 line-length = 110
