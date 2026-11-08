@@ -1,1 +1,1 @@
-"""mrv agent (implemented in a later phase; see docs/AGENTS.md)."""
+"""MRV agent module."""

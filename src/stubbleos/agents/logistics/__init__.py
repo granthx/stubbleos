@@ -1,1 +1,1 @@
-"""logistics agent (implemented in a later phase; see docs/AGENTS.md)."""
+"""Logistics agent module."""

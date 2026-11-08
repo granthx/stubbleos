@@ -1,4 +1,4 @@
-"""Schemas for Field Monitor agent (Phase 4 contract + Phase 5 full remote sensing)."""
+"""Schemas for Field Monitor agent and remote sensing schemas."""
 
 from __future__ import annotations
 

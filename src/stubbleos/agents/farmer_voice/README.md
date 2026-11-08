@@ -1,4 +1,4 @@
-# Farmer Voice Agent (Phase 4 Skeleton)
+# Farmer Voice Agent
 
 ## Purpose
 The Farmer Voice agent conducts vernacular automated phone calls (IVR) and conversational messaging (WhatsApp/SMS) in Punjabi, Hindi, and English to record farmer machine bookings, communicate schedules, and capture consent.

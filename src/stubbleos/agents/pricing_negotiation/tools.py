@@ -67,7 +67,7 @@ def draft_contract_tool(
 
 
 def create_pricing_tools() -> list[Any]:
-    """Returns baseline tools for compatibility with Phase 4 tests."""
+    """Returns baseline tools for test compatibility."""
     return [compute_dynamic_tariff_mock]
 
 

@@ -1,4 +1,4 @@
-"""Schemas for Weather & Window agent (Phase 4 contract + Phase 5 full evaluation)."""
+"""Schemas for Weather & Window agent and weather evaluation."""
 
 from __future__ import annotations
 

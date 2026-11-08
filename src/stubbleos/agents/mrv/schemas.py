@@ -1,4 +1,4 @@
-"""Schemas for MRV agent (Phase 4 contract + Phase 5 full evidence bundling)."""
+"""Schemas for MRV agent and evidence bundling schemas."""
 
 from __future__ import annotations
 

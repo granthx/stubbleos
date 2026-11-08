@@ -1,4 +1,4 @@
-# Pricing & Negotiation Agent (Phase 4 Skeleton)
+# Pricing & Negotiation Agent
 
 ## Purpose
 The Pricing & Negotiation agent calculates dynamic, tiered machinery and baling tariffs. It incorporates equitable cross-subsidies for marginal and smallholder farmers and negotiates price boundaries with industrial biomass buyers.
