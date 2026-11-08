@@ -1,4 +1,4 @@
-"""Unit tests for Phase 6 edge cases and failure modes."""
+"""Unit tests for edge cases and failure modes."""
 
 from __future__ import annotations
 
