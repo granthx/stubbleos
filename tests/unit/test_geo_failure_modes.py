@@ -1,4 +1,4 @@
-"""Failure mode tests for Phase 5 components and agents."""
+"""Failure mode tests for components and agents."""
 
 from __future__ import annotations
 
