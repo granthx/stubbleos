@@ -1,4 +1,4 @@
-"""Anthropic Messages API adapter. UNVERIFIED in the Phase-1 sandbox (no network, no SDK installed)."""
+"""Anthropic Messages API adapter."""
 
 from __future__ import annotations
 

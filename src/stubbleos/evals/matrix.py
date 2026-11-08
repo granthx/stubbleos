@@ -178,29 +178,19 @@ def update_results_files(matrix: EvaluationMatrixResult, root_dir: Path | None =
             readme_text = f.read()
 
         results_marker = "## Results"
-        implemented_marker = "## Implemented Phases"
+        capabilities_marker = "## Core Architecture & Capabilities"
 
-        if results_marker in readme_text and implemented_marker in readme_text:
+        if results_marker in readme_text and capabilities_marker in readme_text:
             before = readme_text.split(results_marker)[0]
-            after = readme_text.split(implemented_marker)[1]
+            after = readme_text.split(capabilities_marker)[1]
 
             new_results_section = (
                 f"{results_marker}\n\n"
                 f"The results below are produced by reproducible multi-seed simulation runs (`make results`):\n\n"
                 f"{md_content}\n"
-                f"{implemented_marker}"
+                f"{capabilities_marker}"
             )
             updated_readme = before + new_results_section + after
-
-            # Update status badge in README
-            updated_readme = updated_readme.replace(
-                "Phase 7 of 8 (Full API & Dashboard completed)",
-                "Phase 8 of 8 (Full Evaluation & Production Release completed)",
-            )
-            updated_readme = updated_readme.replace(
-                "Not yet built: experiments, evaluation matrix and final verification docs (Phase 8).",
-                "- **Phase 8 (Evaluation Matrix, Benchmarks & Chaos Resilience)**: 4-scenario x 4-strategy simulation matrix, statistical confidence intervals (t-CI and bootstrap percentile), chaos fault-injection suite, micro-benchmarks, and spatial k-anonymity privacy export policy.",
-            )
 
             with open(readme_path, "w", encoding="utf-8") as f:
                 f.write(updated_readme)

@@ -1,4 +1,4 @@
-"""Interactive demonstration runner for StubbleOS (Phase 7).
+"""Interactive demonstration runner for StubbleOS .
 
 Boots an in-memory coordination environment, runs initial scheduling and logistics,
 and launches the FastAPI service on http://127.0.0.1:8000.

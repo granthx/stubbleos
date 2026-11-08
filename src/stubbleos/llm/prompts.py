@@ -96,7 +96,7 @@ class PromptRegistry:
 
 default_registry = PromptRegistry()
 
-# --------------------------------------------------------------------------- Standard Phase 6 prompts
+# --------------------------------------------------------------------------- Standard dialogue prompts
 
 # Generic fallback responses
 default_registry.register(
