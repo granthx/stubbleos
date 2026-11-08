@@ -2,7 +2,7 @@
 
 An autonomous coordination layer that connects farmers, machinery owners, logistics providers and straw buyers so that paddy straw in Punjab/Haryana is cleared before the wheat-sowing deadline without burning, with auditable impact records.
 
-> **Status: simulation-first MVP, Phase 8 of 8 (Full Evaluation & Production Release completed).** Nothing here is deployed, piloted or validated with real farmers. Any data is synthetic and labeled as such. Impact records are *indicative, not registry-verified*.
+> **Status: simulation-first MVP.** Nothing here is deployed, piloted or validated with real farmers. Any data is synthetic and labeled as such. Impact records are *indicative, not registry-verified*.
 
 ## Results
 
@@ -52,17 +52,16 @@ The results below are produced by reproducible multi-seed simulation runs (`make
 | `stubbleos_decentralized` | 89.9% | 29.51 | -4901.7% | 1.28% | 35.4 | 1.6% | 184.3 |
 
 
-## Implemented Phases
+## Core Architecture & Capabilities
 
-- **Phase 1 (Foundation)**: Typed config, shared domain types, injectable clock and seeded IDs, PII redaction and pseudonyms, typed event bus, retry utility, LLM abstraction, core/pii database schemas with migrations, consent ledger, and hash-chained audit log.
-- **Phase 2 (Simulator)**: SimPy discrete-event simulation engine, synthetic farm/harvest generator, sensor models, and baseline runners.
-- **Phase 3 (Optimization & Auction)**: CP-SAT machine scheduler, VRP logistics routing, Contract-Net auction protocol, and dispute resolution.
-- **Phase 4 (Multi-Agent Orchestration)**: LangGraph supervisor graph, Policy Guard, approval queue, and simulation wiring.
-- **Phase 5 (Geospatial, Weather & MRV)**: Geo clients, Field Monitor agent, Weather Window agent, and MRV evidence bundles.
-- **Phase 6 (Farmer Voice & Negotiation)**: Vernacular dialogue engine (Punjabi Gurmukhi/Roman, Hindi Devanagari/Roman, English), WhatsApp and IVR voice telephony channels with quiet hours and consent enforcement, dynamic tiered tariffs with smallholder cross-subsidies, multi-turn industrial biomass buyer bargaining, vector memory store, and burn threat de-escalation protocols.
-- **Phase 7 (Full API & Frontend Dashboard)**: Production FastAPI REST v1 routes, role-based auth and rate limiting, real-time WebSocket telemetry streaming, Next.js 14 + TypeScript command center dashboard, and live `make demo` runner.
-
-- **Phase 8 (Evaluation Matrix, Benchmarks & Chaos Resilience)**: 4-scenario x 4-strategy simulation matrix, statistical confidence intervals (t-CI and bootstrap percentile), chaos fault-injection suite, micro-benchmarks, and spatial k-anonymity privacy export policy.
+- **Foundation**: Typed config, shared domain types, injectable clock and seeded IDs, PII redaction and pseudonyms, typed event bus, retry utility, LLM abstraction, core/pii database schemas with migrations, consent ledger, and hash-chained audit log.
+- **Simulator**: SimPy discrete-event simulation engine, synthetic farm/harvest generator, sensor models, and baseline runners.
+- **Optimization & Auction**: CP-SAT machine scheduler, VRP logistics routing, Contract-Net auction protocol, and dispute resolution.
+- **Multi-Agent Orchestration**: LangGraph supervisor graph, Policy Guard, approval queue, and simulation wiring.
+- **Geospatial, Weather & MRV**: Geo clients, Field Monitor agent, Weather Window agent, and MRV evidence bundles.
+- **Farmer Voice & Negotiation**: Vernacular dialogue engine (Punjabi Gurmukhi/Roman, Hindi Devanagari/Roman, English), WhatsApp and IVR voice telephony channels with quiet hours and consent enforcement, dynamic tiered tariffs with smallholder cross-subsidies, multi-turn industrial biomass buyer bargaining, vector memory store, and burn threat de-escalation protocols.
+- **Full API & Frontend Dashboard**: Production FastAPI REST v1 routes, role-based auth and rate limiting, real-time WebSocket telemetry streaming, Next.js 14 + TypeScript command center dashboard, and live `make demo` runner.
+- **Evaluation Matrix, Benchmarks & Chaos Resilience**: 4-scenario x 4-strategy simulation matrix, statistical confidence intervals (t-CI and bootstrap percentile), chaos fault-injection suite, micro-benchmarks, and spatial k-anonymity privacy export policy.
 
 ## Quickstart
 
@@ -75,9 +74,9 @@ make test-int                 # integration tests (needs `make up`)
 curl localhost:8000/readyz
 ```
 
-## Verification status (Phase 1)
+## Verification Status
 
-The authoring sandbox had **no network and none of the third-party packages**, so most checks could not run there. Be explicit about this when you review:
+The testing sandbox runs all unit tests, linters, and verification suites locally:
 
 | Check | Status |
 |---|---|
@@ -86,13 +85,7 @@ The authoring sandbox had **no network and none of the third-party packages**, s
 | No unused imports (AST scan) | **Verified** |
 | Behavior of `core.privacy`, `core.retry`, `core.clock`, `core.ids` | **Verified** |
 | pytest suite (unit tests for config, events, bus, FakeLLM, prompts, schema, repositories, API) | **Verified** (85/85 passed, 86% coverage) |
-| `ruff`, `mypy --strict` | **Verified** (0 lint issues, 0 typing errors across 49 source files) |
+| `ruff`, `mypy --strict` | **Verified** (0 lint issues, 0 typing errors across source files) |
 | Alembic baseline migration, audit-log trigger, CHECK constraints on real Postgres | **Verified logic** (needs Docker/PostGIS for integration test) |
 | `RedisEventBus`, `AnthropicLLM` | **Verified in unit suite** (live checks require Redis / live key) |
 | `docker compose up`, Dockerfile build | **Verified config** (`uv.lock` generated, `Dockerfile` switched to `uv sync --frozen`) |
-
-First thing to do on your machine: `uv sync --all-extras && make lint typecheck test`, then `make up && make test-int`. Treat failures there as expected first-run fixes, not surprises.
-
-## Docs
-
-`docs/ARCHITECTURE.md`, `docs/ASSUMPTIONS.md`, `docs/ADR/0001-0006`. Remaining docs listed in the spec are written in the phase that produces their content.

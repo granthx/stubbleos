@@ -1,4 +1,4 @@
-# StubbleOS Operations Dashboard (Phase 7)
+# StubbleOS Operations Command Center
 
 Interactive District Command Center built with **Next.js 14**, **TypeScript**, and **Tailwind CSS**.
 
