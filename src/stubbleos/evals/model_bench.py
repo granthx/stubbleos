@@ -173,7 +173,7 @@ def evaluate_dataset_with_candidate(
         if candidate_key == "heuristic_baseline":
             actual_intent, _ = classify_intent(text)
             extracted_slots = extract_entities(text)
-            actual_slots = {}
+            actual_slots: dict[str, Any] = {}
             if extracted_slots.area_acres is not None:
                 actual_slots["area_acres"] = extracted_slots.area_acres
             if extracted_slots.machine_type is not None:
