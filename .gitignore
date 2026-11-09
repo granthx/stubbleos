@@ -12,5 +12,5 @@ dist/
 node_modules/
 .next/
 notebooks/.ipynb_checkpoints/
-results/
+/results/
 uv.lock.bak

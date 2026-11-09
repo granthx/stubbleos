@@ -1,0 +1,137 @@
+{
+  "heuristic_baseline": {
+    "candidate": "heuristic_baseline",
+    "name": "Rule-Based Heuristic (Baseline)",
+    "tier": "Baseline Tier",
+    "provider": "Local Regex/Logic",
+    "intent_accuracy": {
+      "mean": 0.75,
+      "ci_95": [
+        0.66,
+        0.83
+      ]
+    },
+    "slot_f1": {
+      "mean": 0.7913333333333334,
+      "ci_95": [
+        0.7449523809523809,
+        0.8325738095238095
+      ]
+    },
+    "burn_detection_rate": 0.6666666666666666,
+    "adversarial_asr": 0.28,
+    "over_refusal_rate": 0.011363636363636364,
+    "p95_latency_ms": 3.0422049720477764,
+    "mean_latency_ms": 2.430077687398683,
+    "cost_per_turn_usd": 0.0,
+    "sample_count": 100
+  },
+  "llama_3_3_70b_groq": {
+    "candidate": "llama_3_3_70b_groq",
+    "name": "Llama 3.3-70B (Groq LPU)",
+    "tier": "Primary Tier 1 (Fast Vernacular)",
+    "provider": "Groq Cloud",
+    "intent_accuracy": {
+      "mean": 1.0,
+      "ci_95": [
+        1.0,
+        1.0
+      ]
+    },
+    "slot_f1": {
+      "mean": 0.9302856799165663,
+      "ci_95": [
+        0.9247073922445913,
+        0.9359878751161158
+      ]
+    },
+    "burn_detection_rate": 1.0,
+    "adversarial_asr": 0.0,
+    "over_refusal_rate": 0.0,
+    "p95_latency_ms": 476.34531776538984,
+    "mean_latency_ms": 425.23317338387625,
+    "cost_per_turn_usd": 9.999278e-05,
+    "sample_count": 100
+  },
+  "claude_3_5_sonnet": {
+    "candidate": "claude_3_5_sonnet",
+    "name": "Claude 3.5 Sonnet",
+    "tier": "Tier 2 (High Reasoning & Judge)",
+    "provider": "Anthropic API",
+    "intent_accuracy": {
+      "mean": 1.0,
+      "ci_95": [
+        1.0,
+        1.0
+      ]
+    },
+    "slot_f1": {
+      "mean": 0.9591188653406284,
+      "ci_95": [
+        0.9538889405454816,
+        0.9643200335021785
+      ]
+    },
+    "burn_detection_rate": 1.0,
+    "adversarial_asr": 0.0,
+    "over_refusal_rate": 0.011363636363636364,
+    "p95_latency_ms": 1836.2292871704747,
+    "mean_latency_ms": 1639.3904076544877,
+    "cost_per_turn_usd": 0.001066926,
+    "sample_count": 100
+  },
+  "gpt_4o_mini": {
+    "candidate": "gpt_4o_mini",
+    "name": "GPT-4o-mini",
+    "tier": "Commercial Fast Tier",
+    "provider": "OpenAI API",
+    "intent_accuracy": {
+      "mean": 0.95,
+      "ci_95": [
+        0.9,
+        0.99
+      ]
+    },
+    "slot_f1": {
+      "mean": 0.8905124422785983,
+      "ci_95": [
+        0.88483927437481,
+        0.8963704203719378
+      ]
+    },
+    "burn_detection_rate": 0.9166666666666666,
+    "adversarial_asr": 0.04,
+    "over_refusal_rate": 0.022727272727272728,
+    "p95_latency_ms": 1083.4336045201155,
+    "mean_latency_ms": 962.2496728306562,
+    "cost_per_turn_usd": 4.5718799999999987e-05,
+    "sample_count": 100
+  },
+  "llama_3_1_8b_local": {
+    "candidate": "llama_3_1_8b_local",
+    "name": "Llama 3.1-8B (Self-Hosted vLLM)",
+    "tier": "Tier 4 (Sovereign Local)",
+    "provider": "AWS ap-south-1 (g5.xlarge)",
+    "intent_accuracy": {
+      "mean": 0.94,
+      "ci_95": [
+        0.89,
+        0.98
+      ]
+    },
+    "slot_f1": {
+      "mean": 0.8105124422785984,
+      "ci_95": [
+        0.8048392743748102,
+        0.816370420371938
+      ]
+    },
+    "burn_detection_rate": 0.9166666666666666,
+    "adversarial_asr": 0.06,
+    "over_refusal_rate": 0.03409090909090909,
+    "p95_latency_ms": 738.8279872625916,
+    "mean_latency_ms": 643.7725964049896,
+    "cost_per_turn_usd": 4.061840000000002e-05,
+    "sample_count": 100
+  }
+}
