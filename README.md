@@ -107,7 +107,7 @@ The testing sandbox runs all unit tests, linters, and verification suites locall
 | `pyproject.toml`, `docker-compose.yml`, CI and pre-commit configs parse | **Verified** |
 | No unused imports (AST scan) | **Verified** |
 | Behavior of `core.privacy`, `core.retry`, `core.clock`, `core.ids` | **Verified** |
-| pytest suite (unit tests for config, events, bus, FakeLLM, prompts, schema, repositories, API) | **Verified** (85/85 passed, 86% coverage) |
+| pytest suite (unit tests for config, events, bus, FakeLLM, prompts, schema, repositories, API, evals, go-live gate) | **Verified** (271/271 passed, 87% coverage) |
 | `ruff`, `mypy --strict` | **Verified** (0 lint issues, 0 typing errors across source files) |
 | Alembic baseline migration, audit-log trigger, CHECK constraints on real Postgres | **Verified logic** (needs Docker/PostGIS for integration test) |
 | `RedisEventBus`, `AnthropicLLM` | **Verified in unit suite** (live checks require Redis / live key) |
